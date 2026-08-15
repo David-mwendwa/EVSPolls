@@ -6,9 +6,10 @@ const API_BASE_URL = (() => {
     return import.meta.env.VITE_API_BASE_URL;
   }
 
-  // 2) Default by mode
+  // 2) Default by mode. 5002 matches backend/.env — port 5000 is held by the
+  // AirPlay Receiver on macOS, so the API cannot use it locally.
   if (import.meta.env.MODE === 'development') {
-    return 'http://localhost:5000/api/v1';
+    return 'http://localhost:5002/api/v1';
   }
 
   // 3) Production fallback: Render API URL

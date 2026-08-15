@@ -68,12 +68,14 @@ const seedUsers = async () => {
           continue;
         }
 
-        // Generate password based on email
+        // Generate password based on email. It stays plain text here: the
+        // User model's pre-save hook hashes it, and hashing it twice would
+        // leave the account unable to sign in with the password we print.
         const password = generatePassword(email);
-        const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Check if user exists
-        const existingUser = await User.findOne({ email });
+        // `password` is `select: false`, so it has to be asked for explicitly
+        // before it can be compared against.
+        const existingUser = await User.findOne({ email }).select('+password');
 
         if (existingUser) {
           // Update existing user if needed
@@ -83,8 +85,8 @@ const seedUsers = async () => {
           ));
 
           if (isPasswordChanged) {
-            existingUser.password = hashedPassword;
-            existingUser.passwordConfirm = password; // Will be hashed by pre-save hook
+            existingUser.password = password; // Hashed by the pre-save hook
+            existingUser.passwordConfirm = password;
             await existingUser.save({ validateBeforeSave: false });
             console.log(
               `Updated user: ${email} (password reset to ${password})`
@@ -98,8 +100,8 @@ const seedUsers = async () => {
           // Create new user
           const newUser = new User({
             ...userData,
-            password: hashedPassword,
-            passwordConfirm: password, // Will be hashed by pre-save hook
+            password, // Hashed by the pre-save hook
+            passwordConfirm: password,
             role: 'user', // Default role
             status: 'active', // Default status
           });
