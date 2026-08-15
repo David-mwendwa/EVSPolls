@@ -80,16 +80,19 @@ export const getUser = getOne(User);
 
 export const deleteUser = deleteOne(User);
 
+// The demo voter is spared so the account advertised on the sign-in page keeps
+// working after a purge.
+const DEMO_VOTER_EMAIL = 'voter.user@evs.ke';
+
 export const deleteNonAdminUsers = async (req, res) => {
   const result = await User.deleteMany({
     role: { $nin: ['admin', 'sysadmin'] },
-    email: { $ne: 'voter@evs.ke' },
+    email: { $ne: DEMO_VOTER_EMAIL },
   });
 
   res.status(200).json({
     success: true,
     deletedCount: result.deletedCount,
-    message:
-      'All non-admin and non-sysadmin users (except voter@evs.ke) have been deleted',
+    message: `All non-admin and non-sysadmin users (except ${DEMO_VOTER_EMAIL}) have been deleted`,
   });
 };

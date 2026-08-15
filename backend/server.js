@@ -1,211 +1,14 @@
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import 'express-async-errors';
 import 'dotenv/config.js';
 import mongoose from 'mongoose';
-import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
-import express from 'express';
-import cors from 'cors';
+import app from './app.js';
+import Election from './models/Election.js';
 
-// Security middleware
-import helmet from 'helmet';
-import xss from 'xss-clean';
-import mongoSanitize from 'express-mongo-sanitize';
-import rateLimit from 'express-rate-limit';
-import hpp from 'hpp';
+// The Express app itself lives in app.js so that tests can import it without
+// opening a database connection or binding a port. This file is only the
+// process entry point: connect, listen, and shut down cleanly.
 
 // =====================
-// 1. GLOBAL ERROR HANDLERS
-// =====================
-
-// Handle uncaught exceptions (synchronous errors) i.e undefined value
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error('Error:', err.name, err.message);
-  console.error(err.stack);
-  process.exit(1);
-});
-
-// Initialize Express app
-const app = express();
-
-app.set('trust proxy', 1); // trust first proxy (Render)
-
-// =====================
-// 2. GLOBAL MIDDLEWARE
-// =====================
-
-// Enable CORS
-app.use(
-  cors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://evspolls.netlify.app',
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
-// =====================
-// 3. SECURITY MIDDLEWARE
-// =====================
-
-// Set security HTTP headers
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'trusted-cdn.com'],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:'],
-        connectSrc: ["'self'", 'api.yourservice.com'],
-      },
-    },
-    crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: { policy: 'same-origin' },
-    crossOriginResourcePolicy: { policy: 'same-site' },
-    hsts: { maxAge: 15552000, includeSubDomains: true },
-  })
-);
-
-// Data sanitization against NoSQL injection
-app.use(mongoSanitize());
-
-// Parse JSON and URL-encoded request bodies
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
-// Clean any user input from XSS attacks
-app.use(xss());
-
-// Parse cookies
-app.use(cookieParser());
-
-// Prevent parameter pollution
-app.use(
-  hpp({
-    whitelist: ['page', 'limit', 'sort', 'fields', 'search', 'status'],
-  })
-);
-
-// =====================
-// 4. LOGGING (Development only)
-// =====================
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
-
-// =====================
-// 5. RATE LIMITING
-// =====================
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per window
-  message: 'Too many login attempts. Please try again later.',
-  skip: (req) => req.path === '/health',
-});
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  message: 'Too many requests from this IP, please try again later.',
-  skip: (req) => req.path.startsWith('/api/health'),
-});
-
-app.use('/api', apiLimiter);
-app.use('/api/v1/auth', authLimiter);
-
-// =====================
-// 6. ROUTES
-// =====================
-
-/**
- * Simple health check endpoint for uptime and environment monitoring.
- *
- * Returns a JSON payload with basic status information that can be used by
- * load balancers or monitoring tools.
- *
- * @route GET /api/health
- */
-app.get('/api/health', (req, res) => {
-  res.set('Cache-Control', 'no-store');
-  res.status(200).json({
-    status: 'success',
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    uptime: process.uptime(),
-  });
-});
-
-// Import and use routes
-import authRouter from './routes/authRoutes.js';
-import userRouter from './routes/userRoutes.js';
-import electionRouter from './routes/electionRoutes.js';
-import candidateRouter from './routes/candidateRoutes.js';
-import voterRouter from './routes/voterRoutes.js';
-import settingsRouter from './routes/settingsRoutes.js';
-
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/users', userRouter);
-app.use('/api/v1/elections', electionRouter);
-app.use('/api/v1/candidates', candidateRouter);
-app.use('/api/v1/voters', voterRouter);
-app.use('/api/v1/settings', settingsRouter);
-
-// =====================
-// 7. SERVE STATIC FILES (Production Only)
-// =====================
-// if (/production/.test(process.env.NODE_ENV)) {
-//   // Serve static files with 1-year cache for better performance
-//   app.use(
-//     express.static(path.join(__dirname, '../frontend/dist'), {
-//       maxAge: '1y',
-//       // Don't cache HTML files to ensure users get fresh content
-//       setHeaders: (res, path) => {
-//         if (path.endsWith('.html')) {
-//           res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-//         }
-//       },
-//     })
-//   );
-
-//   // Handle Single Page Application (SPA) routing
-//   app.get('*', (req, res) => {
-//     // Skip API routes
-//     if (req.path.startsWith('/api/')) {
-//       return res.status(404).json({ message: 'Not Found' });
-//     }
-//     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-//   });
-// }
-
-if (/production/.test(process.env.NODE_ENV)) {
-  app.get('/', (req, res) => {
-    res.status(200).json({ message: 'API is running' });
-  });
-}
-
-// =====================
-// 8. ERROR HANDLING
-// =====================
-import notFoundMiddleware from './middleware/notFound.js';
-import errorHandlerMiddleware from './middleware/errorHandler.js';
-
-// 404 handler
-app.use(notFoundMiddleware);
-
-// Global error handler
-app.use(errorHandlerMiddleware);
-
-// =====================
-// 9. DATABASE CONNECTION
+// 1. DATABASE CONNECTION
 // =====================
 if (!process.env.MONGO_URL) {
   console.error('MONGO_URL is not defined in environment variables');
@@ -224,18 +27,44 @@ const mongooseOptions = {
   w: 'majority', // Ensure write acknowledgement
 };
 
+// =====================
+// 2. ELECTION STATUS SWEEP
+// =====================
+
+// An election's status is a stored field, so it only changes when something
+// writes to it. Without this sweep a poll stays `upcoming` past its own start
+// time and stays `active` long after it closes — the listings lie, and the
+// only thing that ever corrected them was an admin happening to save the
+// election. Run it at boot and on an interval so the calendar drives state.
+const STATUS_SWEEP_INTERVAL_MS = 60 * 1000;
+
+const sweepElectionStatuses = async () => {
+  try {
+    await Election.updateElectionStatuses();
+  } catch (err) {
+    // A failed sweep is not fatal: the next tick retries, and the vote path
+    // checks dates directly rather than trusting the stored status.
+    console.error('Election status sweep failed:', err.message);
+  }
+};
+
 mongoose
   .connect(DB, mongooseOptions)
-  .then(() => console.log('✅ MongoDB connection successful'))
+  .then(() => {
+    console.log('✅ MongoDB connection successful');
+    sweepElectionStatuses();
+    setInterval(sweepElectionStatuses, STATUS_SWEEP_INTERVAL_MS).unref();
+  })
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
   });
 
 // =====================
-// 10. SERVER SETUP
+// 2. SERVER SETUP
 // =====================
-const PORT = process.env.PORT || 5000;
+// 5002 rather than 5000: the macOS AirPlay Receiver holds 5000 locally.
+const PORT = process.env.PORT || 5002;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(
     `🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
@@ -244,30 +73,40 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 });
 
 // =====================
-// 11. GLOBAL ERROR HANDLERS
+// 3. PROCESS-LEVEL ERROR HANDLERS
 // =====================
 
+/**
+ * Log a fatal error, then close the HTTP server and exit non-zero.
+ *
+ * A timer guards the shutdown so a hung connection cannot keep a broken
+ * process alive indefinitely — the platform can then restart it.
+ *
+ * @param {string} label - Human-readable reason, used as the log heading.
+ * @param {Error} err - The error that triggered the shutdown.
+ * @returns {void}
+ */
+const shutdownOnFatalError = (label, err) => {
+  console.error(`${label} 💥 Shutting down...`);
+  console.error('Error:', err.name, err.message);
+  console.error(err.stack);
+
+  server.close(() => process.exit(1));
+
+  setTimeout(() => process.exit(1), 10000).unref();
+};
+
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error('Error:', err.name, err.message);
-  console.error(err.stack); // Add stack trace for debugging
-  server.close(() => {
-    process.exit(1);
-  });
-});
+process.on('unhandledRejection', (err) =>
+  shutdownOnFatalError('UNHANDLED REJECTION!', err)
+);
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error('Error:', err.name, err.message);
-  console.error(err.stack); // Add stack trace for debugging
-  server.close(() => {
-    process.exit(1);
-  });
-});
+// Handle uncaught exceptions (synchronous errors)
+process.on('uncaughtException', (err) =>
+  shutdownOnFatalError('UNCAUGHT EXCEPTION!', err)
+);
 
-// Handle SIGTERM (for Heroku, etc.)
+// Handle SIGTERM (Render sends this on deploy/restart)
 process.on('SIGTERM', () => {
   console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
   server.close(() => {
@@ -284,4 +123,4 @@ process.on('SIGINT', () => {
   });
 });
 
-export default app;
+export default server;

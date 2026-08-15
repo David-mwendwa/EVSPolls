@@ -8,6 +8,10 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useElection } from '../context/ElectionContext';
+import PageHeader from '../components/ui/PageHeader';
+import Card, { CardHeader } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import StatCard from '../components/ui/StatCard';
 import {
   FiHome,
   FiUsers,
@@ -136,63 +140,50 @@ const Admin = () => {
 
       const totalVotersCount = totalVoters || voters.length;
 
+      const completedElections =
+        elections.length - activeElections - upcomingElections;
+
+      // Four metrics rather than six: the previous row included a "System
+      // Status" tile that restated the settings page, and split election
+      // counts across three tiles that read better together.
       setStats([
         {
-          name: 'Active Elections',
+          name: 'Open elections',
           value: activeElections,
-          icon: <FiAward className='h-6 w-6 text-blue-500' />,
+          iconComponent: FiAward,
+          tone: 'success',
           change:
             activeElections > 0
-              ? `+${activeElections} running`
-              : 'No active elections',
-          changeType: activeElections > 0 ? 'increase' : 'neutral',
+              ? 'Accepting votes now'
+              : 'Nothing open right now',
+          to: '/admin?tab=elections',
         },
         {
-          name: 'Total Voters',
-          value: totalVotersCount,
-          icon: <FiUsers className='h-6 w-6 text-green-500' />,
-          change:
-            totalVotersCount > 0
-              ? `${totalVotersCount} registered`
-              : 'No voters yet',
-          changeType: 'info',
+          name: 'Registered voters',
+          value: totalVotersCount.toLocaleString(),
+          iconComponent: FiUsers,
+          tone: 'primary',
+          change: 'Eligible to cast a ballot',
+          to: '/admin?tab=voters',
         },
         {
-          name: 'Draft Elections',
-          value: draftElections,
-          icon: <FiClock className='h-6 w-6 text-yellow-500' />,
+          name: 'Scheduled',
+          value: upcomingElections,
+          iconComponent: FiClock,
+          tone: 'warning',
           change:
             draftElections > 0
-              ? `${draftElections} drafts in progress`
-              : 'No drafts at the moment',
-          changeType: 'info',
+              ? `${draftElections} still in draft`
+              : 'No drafts pending',
+          to: '/admin?tab=elections',
         },
         {
-          name: 'System Status',
-          value: maintenanceMode ? 'Maintenance' : 'Operational',
-          icon: maintenanceMode ? (
-            <FiAlertCircle className='h-6 w-6 text-yellow-500' />
-          ) : (
-            <FiCheckCircle className='h-6 w-6 text-green-500' />
-          ),
-          status: maintenanceMode ? 'maintenance' : 'operational',
-        },
-        {
-          name: 'Upcoming Elections',
-          value: upcomingElections,
-          icon: <FiClock className='h-6 w-6 text-purple-500' />,
-          change:
-            upcomingElections > 0
-              ? `${upcomingElections} scheduled`
-              : 'No upcoming elections',
-          changeType: 'info',
-        },
-        {
-          name: 'Completed Elections',
-          value: elections.length - activeElections - upcomingElections,
-          icon: <FiCheckCircle className='h-6 w-6 text-green-500' />,
-          change: 'View history',
-          changeType: 'info',
+          name: 'Completed',
+          value: completedElections < 0 ? 0 : completedElections,
+          iconComponent: FiCheckCircle,
+          tone: 'neutral',
+          change: 'Results published',
+          to: '/admin?tab=elections',
         },
       ]);
     }
@@ -200,25 +191,11 @@ const Admin = () => {
 
   // Recent activity data
   const [recentActivity, setRecentActivity] = useState([
-    {
-      id: 1,
-      user: 'System',
-      action: 'System initialized',
-      time: 'Just now',
-      icon: <FiCheckCircle className='h-4 w-4 text-green-500' />,
-    },
   ]);
 
   // Simulate real-time updates
   useEffect(() => {
     const activities = [
-      {
-        id: 1,
-        user: 'System',
-        action: 'System initialized',
-        time: 'Just now',
-        icon: <FiCheckCircle className='h-4 w-4 text-green-500' />,
-      },
       ...(elections?.slice(0, 3).map((election, index) => ({
         id: index + 2,
         user: 'Admin',
@@ -228,7 +205,7 @@ const Admin = () => {
         time: formatDistanceToNow(new Date(election.startDate), {
           addSuffix: true,
         }),
-        icon: <FiAward className='h-4 w-4 text-blue-500' />,
+        icon: <FiAward className='h-4 w-4 text-primary-500' />,
       })) || []),
       // Recent election updates (based on updatedAt)
       ...(elections || [])
@@ -249,7 +226,7 @@ const Admin = () => {
               addSuffix: true,
             }
           ),
-          icon: <FiEdit2 className='h-4 w-4 text-purple-500' />,
+          icon: <FiEdit2 className='h-4 w-4 text-gray-400' />,
         })),
       ...(voters?.slice(0, 2).map((voter, index) => ({
         id: index + 5,
@@ -320,7 +297,7 @@ const Admin = () => {
   };
 
   return (
-    <div className='flex h-screen bg-gray-50 pt-16'>
+    <div className='flex bg-gray-50'>
       {/* Mobile sidebar backdrop */}
       {isMobile && isSidebarOpen && (
         <div
@@ -340,7 +317,7 @@ const Admin = () => {
             <div className='flex items-center'>
               <FiBarChart2 className='h-8 w-8 text-primary-600' />
               <span className='ml-2 text-xl font-bold text-gray-800'>
-                VoteAdmin
+                EVSPolls
               </span>
             </div>
             <button
@@ -439,137 +416,81 @@ const DashboardContent = ({ stats, recentActivity, isLoading }) => {
   }
 
   return (
-    <div className='space-y-6'>
-      {/* Welcome Header */}
-      <div className='bg-white shadow rounded-lg p-6'>
-        <h1 className='text-2xl font-bold text-gray-900'>Dashboard Overview</h1>
-        <p className='mt-1 text-sm text-gray-500'>
-          Welcome back! Here's what's happening with your elections today.
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title='Dashboard'
+        description="What's happening across your elections today."
+        actions={
+          <>
+            <Button
+              variant='secondary'
+              size='sm'
+              icon={FiUserPlus}
+              onClick={() => navigate('/admin?tab=voters')}>
+              Voters
+            </Button>
+            <Button
+              size='sm'
+              icon={FiPlusCircle}
+              onClick={() => navigate('/create')}>
+              New election
+            </Button>
+          </>
+        }
+      />
 
-      {/* Stats */}
-      <div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+      {/* Stats. Tone is tied to meaning rather than picked per tile: the
+          previous row cycled blue, green, yellow and purple for metrics that
+          had no such relationship. */}
+      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6'>
         {stats.map((stat) => (
-          <div
+          <StatCard
             key={stat.name}
-            className='overflow-hidden rounded-lg bg-white px-6 py-5 shadow hover:shadow-md transition-shadow duration-200'>
-            <div className='flex items-center'>
-              <div
-                className={`flex-shrink-0 rounded-md p-3 ${
-                  stat.status === 'maintenance'
-                    ? 'bg-yellow-50'
-                    : 'bg-primary-50'
-                }`}>
-                {stat.icon}
-              </div>
-              <div className='ml-5 w-0 flex-1'>
-                <dt className='text-sm font-medium text-gray-500 truncate'>
-                  {stat.name}
-                </dt>
-                <dd className='flex flex-col sm:flex-row sm:items-baseline'>
-                  <div className='text-2xl font-semibold text-gray-900'>
-                    {stat.value}
-                  </div>
-                  {stat.change && (
-                    <span
-                      className={`mt-1 sm:mt-0 sm:ml-2 text-sm font-medium ${
-                        stat.changeType === 'increase'
-                          ? 'text-green-600'
-                          : stat.changeType === 'decrease'
-                            ? 'text-red-600'
-                            : 'text-gray-500'
-                      }`}>
-                      {stat.change}
-                    </span>
-                  )}
-                </dd>
-              </div>
-            </div>
-          </div>
+            label={stat.name}
+            value={stat.value}
+            caption={stat.change}
+            icon={stat.iconComponent}
+            tone={stat.tone || 'primary'}
+            to={stat.to}
+          />
         ))}
       </div>
 
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-        {/* Recent Activity */}
-        <div className='bg-white shadow sm:rounded-lg lg:col-span-2'>
-          <div className='px-4 py-5 sm:px-6 border-b border-gray-200'>
-            <h3 className='text-lg font-semibold leading-6 text-gray-900'>
-              Recent Activity
-            </h3>
-            <p className='mt-1 text-sm text-gray-500'>
-              Latest updates across elections and voters
-            </p>
-          </div>
-          <div className='divide-y divide-gray-200'>
-            {recentActivity.length > 0 ? (
-              <ul className='divide-y divide-gray-200'>
-                {recentActivity.map((activity) => (
-                  <li
-                    key={activity.id}
-                    className='px-4 py-4 sm:px-6 hover:bg-gray-50'>
-                    <div className='flex items-center'>
-                      <div className='flex-shrink-0'>{activity.icon}</div>
-                      <div className='ml-4'>
-                        <p className='text-sm font-medium text-gray-900'>
-                          {activity.action}
-                        </p>
-                        <p className='text-xs text-gray-500 mt-0.5'>
-                          {activity.time}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className='p-6 text-center text-gray-500'>
-                No recent activities to display
-              </div>
-            )}
-          </div>
-          <div className='bg-gray-50 px-4 py-3 text-right sm:px-6 rounded-b-lg'>
-            <button
-              type='button'
-              onClick={() => navigate('/admin?tab=dashboard')}
-              className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'>
-              View all activity
-            </button>
-          </div>
+      {/* Recent activity now spans the full width. It previously sat beside a
+          "Quick Actions" panel whose three buttons left most of the column
+          empty; those actions are in the header and the sidebar instead. */}
+      <Card padded={false}>
+        <div className='px-5 pt-5'>
+          <CardHeader
+            title='Recent activity'
+            description='Latest updates across elections and voters'
+          />
         </div>
 
-        {/* Quick Actions */}
-        <div className='bg-white shadow sm:rounded-lg'>
-          <div className='px-4 py-5 sm:px-6 border-b border-gray-200'>
-            <h3 className='text-lg font-medium leading-6 text-gray-900'>
-              Quick Actions
-            </h3>
-            <p className='mt-1 text-sm text-gray-500'>
-              Common tasks and shortcuts
-            </p>
-          </div>
-          <div className='p-4 space-y-3'>
-            <button
-              onClick={() => navigate('/admin?tab=elections')}
-              className='w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'>
-              <FiPlusCircle className='-ml-1 mr-2 h-5 w-5' />
-              New Election
-            </button>
-            <button
-              onClick={() => navigate('/admin?tab=voters')}
-              className='w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'>
-              <FiUserPlus className='-ml-1 mr-2 h-5 w-5' />
-              Add Voter
-            </button>
-            <button
-              onClick={() => navigate('/admin?tab=settings')}
-              className='w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'>
-              <FiSettings className='-ml-1 mr-2 h-5 w-5 text-gray-500' />
-              System Settings
-            </button>
-          </div>
-        </div>
-      </div>
+        {recentActivity.length > 0 ? (
+          <ul className='divide-y divide-gray-100'>
+            {recentActivity.map((activity) => (
+              <li
+                key={activity.id}
+                className='flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors'>
+                <span className='flex-shrink-0 mt-0.5'>{activity.icon}</span>
+                <div className='min-w-0'>
+                  <p className='text-sm font-medium text-gray-900 mb-0 truncate'>
+                    {activity.action}
+                  </p>
+                  <p className='text-xs text-gray-500 mt-0.5 mb-0'>
+                    {activity.time}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className='px-5 py-10 text-center text-sm text-gray-500 mb-0'>
+            No activity to show yet.
+          </p>
+        )}
+      </Card>
     </div>
   );
 };
@@ -818,8 +739,8 @@ const ElectionsContent = () => {
                   className='hover:bg-gray-50 transition-colors'>
                   <td className='px-4 py-3'>
                     <div className='flex items-center min-w-[200px]'>
-                      <div className='flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center'>
-                        <FiAward className='h-5 w-5 text-indigo-600' />
+                      <div className='flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center'>
+                        <FiAward className='h-5 w-5 text-primary-600' />
                       </div>
                       <div className='ml-3 overflow-hidden'>
                         <div className='text-sm font-medium text-gray-900 truncate'>
@@ -866,9 +787,7 @@ const ElectionsContent = () => {
                         <span>
                           {typeof election.totalVoters === 'number'
                             ? election.totalVoters
-                            : Array.isArray(election.voters)
-                              ? election.voters.length
-                              : election.voters || 0}{' '}
+                            : (election.votersCount ?? election.voted ?? 0)}{' '}
                           voters
                         </span>
                       </div>

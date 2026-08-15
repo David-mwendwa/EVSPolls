@@ -84,9 +84,9 @@ const Home = () => {
           />
         </svg>
       ),
-      title: 'Secure Voting',
+      title: 'One person, one vote',
       description:
-        'Blockchain-based security ensures every vote is encrypted and tamper-proof.',
+        'Every ballot is checked against the electoral roll and recorded once. Who voted is never published alongside what they chose.',
     },
     {
       icon: (
@@ -104,8 +104,9 @@ const Home = () => {
           />
         </svg>
       ),
-      title: 'Fast Results',
-      description: 'Get real-time results as soon as the voting period ends.',
+      title: 'Results you can follow',
+      description:
+        'Turnout updates while voting is open, and the full tally is published the moment an election closes.',
     },
     {
       icon: (
@@ -123,69 +124,40 @@ const Home = () => {
           />
         </svg>
       ),
-      title: 'Easy to Use',
+      title: 'Vote from any device',
       description:
-        'Simple and intuitive interface for both voters and election organizers.',
+        'Casting a ballot takes under a minute in a browser — no app to install, nothing to configure.',
     },
   ];
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className='fixed z-50 inset-0 overflow-y-auto'>
-          <div className='flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0'>
-            <div
-              className='fixed inset-0 transition-opacity'
-              aria-hidden='true'>
-              <div className='absolute inset-0 bg-gray-500 opacity-75'></div>
-            </div>
-            <span
-              className='hidden sm:inline-block sm:align-middle sm:h-screen'
-              aria-hidden='true'>
-              &#8203;
-            </span>
-            <Login
-              onClose={handleCloseLoginModal}
-              onSwitchToRegister={handleShowRegister}
-            />
-          </div>
-        </div>
-      )}
-      {showRegisterModal && (
-        <div className='fixed z-50 inset-0 overflow-y-auto'>
-          <div className='flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0'>
-            <div
-              className='fixed inset-0 transition-opacity'
-              aria-hidden='true'>
-              <div className='absolute inset-0 bg-gray-500 opacity-75'></div>
-            </div>
-            <span
-              className='hidden sm:inline-block sm:align-middle sm:h-screen'
-              aria-hidden='true'>
-              &#8203;
-            </span>
-            <Register
-              onClose={handleCloseRegisterModal}
-              onSwitchToLogin={handleShowLogin}
-              onRegisterSuccess={handleRegisterSuccess}
-            />
-          </div>
-        </div>
-      )}
+      {/* Auth dialogs. Each renders its own backdrop through a portal, so they
+          need no wrapper here — the previous one stacked a second, opaque
+          layer behind the blurred backdrop. */}
+      <Login
+        open={showLoginModal}
+        onClose={handleCloseLoginModal}
+        onSwitchToRegister={handleShowRegister}
+      />
+      <Register
+        open={showRegisterModal}
+        onClose={handleCloseRegisterModal}
+        onSwitchToLogin={handleShowLogin}
+      />
       {/* Hero Section */}
       <div className='relative overflow-hidden bg-gradient-to-t from-gray-50 to-white'>
         <div className='py-16 md:py-20 lg:py-24'>
           <div className='text-center'>
             <h1 className='text-3xl md:text-4xl font-bold text-gray-900 mb-4'>
-              <span className='block'>Electronic Voting System</span>
+              <span className='block'>EVSPolls</span>
               <span className='block text-xl md:text-2xl font-semibold text-primary-600 mt-1'>
                 Secure, transparent elections for modern institutions
               </span>
             </h1>
 
             <p className='mt-3 max-w-2xl mx-auto text-sm sm:text-base md:text-base text-gray-600 md:mt-5'>
-              EVS is a web-based voting platform for universities and
+              EVSPolls is a web-based voting platform for universities and
               organizations. Voters can securely participate in elections from
               any device, while administrators manage ballots, monitor turnout,
               and review results in real time.
@@ -202,13 +174,13 @@ const Home = () => {
                     }
                   }}
                   className='w-full sm:w-auto inline-flex items-center justify-center text-sm sm:text-base font-medium px-7 sm:px-8 py-3 rounded-lg border border-primary-600 bg-primary-600 text-white shadow-sm hover:bg-primary-700 hover:border-primary-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white'>
-                  {isAuthenticated ? 'Browse elections' : 'Sign in to EVS'}
+                  {isAuthenticated ? 'Browse elections' : 'Sign in to EVSPolls'}
                 </button>
               </div>
               <Link
                 to='/how-it-works'
                 className='inline-flex items-center justify-center text-sm sm:text-base font-medium px-7 sm:px-8 py-3 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:ring-offset-2 focus:ring-offset-white'>
-                Learn about EVS
+                Learn about EVSPolls
               </Link>
             </div>
 
@@ -293,7 +265,7 @@ const Home = () => {
         <div className='bg-gray-100 rounded-xl p-8 shadow-sm mx-auto'>
           <div className='text-center'>
             <h2 className='text-xl md:text-2xl font-semibold text-gray-900'>
-              Why Institutions Choose EVS
+              Why Institutions Choose EVSPolls
             </h2>
             <div className='mt-10 grid gap-8 md:grid-cols-3'>
               <div className='bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow'>
@@ -316,7 +288,7 @@ const Home = () => {
                 </h3>
                 <p className='text-sm text-gray-600'>
                   Every ballot is encrypted and anonymized to protect voter
-                  privacy. EVS applies strong authentication and modern security
+                  privacy. EVSPolls applies strong authentication and modern security
                   practices end‑to‑end.
                 </p>
               </div>

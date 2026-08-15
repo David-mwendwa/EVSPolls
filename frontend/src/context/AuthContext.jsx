@@ -56,6 +56,16 @@ export const AuthProvider = ({ children }) => {
             : null;
 
         if (storage) {
+          // Honour the stored expiry here as well as on the interval below.
+          // Checking only on the interval would leave an already-expired
+          // session usable for up to a minute after a page load.
+          const expiryTime = storage.getItem('sessionExpiry');
+
+          if (expiryTime && Date.now() > parseInt(expiryTime, 10)) {
+            [localStorage, sessionStorage].forEach(clearStorage);
+            return;
+          }
+
           const { token, userData } = getAuthData(storage);
           if (token && userData) {
             setUser(userData);

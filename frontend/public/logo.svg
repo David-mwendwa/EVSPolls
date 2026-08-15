@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>EVSPolls</title>
+  <rect width="64" height="64" rx="14" fill="url(#evspolls-mark)"/>
+  <!-- A ballot slip dropping into the box: the check is the vote, the slot is the box -->
+  <path d="M20 30V17a2 2 0 0 1 2-2h20a2 2 0 0 1 2 2v13" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M26.5 23.5l4 4 7.5-7.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 30h36v15a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V30z" fill="#FFFFFF" fill-opacity="0.22"/>
+  <path d="M14 30h36v15a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V30z" stroke="#FFFFFF" stroke-width="3.2" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="evspolls-mark" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#0369A1"/>
+    </linearGradient>
+  </defs>
+</svg>

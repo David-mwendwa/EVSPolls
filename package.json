@@ -15,7 +15,7 @@
     "build": "npm run build --prefix frontend",
     "start": "npm run dev --prefix frontend",
     "server": "npm run dev --prefix backend",
-    "test": "concurrently --kill-others-on-fail --names \"FRONTEND,BACKEND\" \"npm test --prefix frontend\" \"npm test --prefix backend\"",
+    "test": "npx concurrently --kill-others-on-fail --names \"FRONTEND,BACKEND\" \"npm test --prefix frontend\" \"npm test --prefix backend\"",
     "test:frontend": "npm test --prefix frontend",
     "test:backend": "npm test --prefix backend",
     "format": "npm run format --prefix frontend && npm run format --prefix backend",

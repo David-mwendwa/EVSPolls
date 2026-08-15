@@ -5,10 +5,62 @@ import {
   NotFoundError,
   ForbiddenError,
 } from '../errors/customErrors.js';
-import { getMany, deleteOne } from '../utils/handleAPI.js';
+import { APIFeatures, deleteOne } from '../utils/handleAPI.js';
+import {
+  serializeElection,
+  serializeElections,
+} from '../utils/serializeElection.js';
+
+/**
+ * Count the accounts eligible to cast a ballot: active, non-administrative
+ * users. Used to express turnout as a share of the electorate.
+ *
+ * @returns {Promise<number|undefined>} The count, or `undefined` if it could
+ *   not be computed — the frontend falls back to its own estimate.
+ */
+const countEligibleVoters = async () => {
+  try {
+    return await User.countDocuments({
+      role: { $nin: ['admin', 'sysadmin'] },
+      status: 'active',
+    });
+  } catch (err) {
+    console.error('Failed to compute eligibleVotersCount:', err);
+    return undefined;
+  }
+};
 
 // Get all elections (with filtering, search, pagination via APIFeatures)
-export const getElections = getMany(Election);
+export const getElections = async (req, res) => {
+  const pageSize = 10;
+
+  const features = new APIFeatures(Election.find(), req.query)
+    .search()
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate(pageSize);
+
+  // Reuse the same filters for the count so `total` describes the result set
+  // rather than the whole collection.
+  const [elections, total] = await Promise.all([
+    features.query,
+    Election.countDocuments(features.query.getFilter()),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: serializeElections(elections, req.user),
+    meta: {
+      pagination: {
+        page: Number(req.query.page) || 1,
+        pageSize: Number(req.query.limit) || pageSize,
+        pageCount: elections.length,
+        total,
+      },
+    },
+  });
+};
 
 // Get single election
 export const getElection = async (req, res) => {
@@ -18,31 +70,11 @@ export const getElection = async (req, res) => {
     throw new NotFoundError('Election not found');
   }
 
-  // Convert to plain object so we can safely add computed properties
-  const election = electionDoc.toObject ? electionDoc.toObject() : electionDoc;
+  const election = serializeElection(electionDoc, req.user);
 
-  // Compute whether the current authenticated user has voted in this election
-  const userId = req.user?.id;
-  let hasVotedForCurrentUser = false;
-
-  if (userId && Array.isArray(election.voters)) {
-    hasVotedForCurrentUser = election.voters.some(
-      (voterId) => String(voterId) === String(userId)
-    );
-  }
-
-  election.hasVotedForCurrentUser = hasVotedForCurrentUser;
-
-  // Compute total eligible voters (all non-admin, non-sysadmin users)
-  try {
-    const eligibleVotersCount = await User.countDocuments({
-      role: { $nin: ['admin', 'sysadmin'] },
-      status: 'active',
-    });
+  const eligibleVotersCount = await countEligibleVoters();
+  if (eligibleVotersCount !== undefined) {
     election.eligibleVotersCount = eligibleVotersCount;
-  } catch (err) {
-    // If this fails, we simply omit eligibleVotersCount and let the frontend fall back
-    console.error('Failed to compute eligibleVotersCount:', err);
   }
 
   res.json(election);
@@ -69,7 +101,7 @@ export const createElection = async (req, res) => {
   });
 
   await election.save();
-  res.status(201).json(election);
+  res.status(201).json(serializeElection(election, req.user));
 };
 
 // Update election (admin only)
@@ -91,7 +123,7 @@ export const updateElection = async (req, res) => {
 
   await election.save();
 
-  res.json(election);
+  res.json(serializeElection(election, req.user));
 };
 
 // Update election status (admin only) - only allow cancelling
@@ -118,10 +150,10 @@ export const updateElectionStatus = async (req, res) => {
 
   await election.save();
 
-  res.json(election);
+  res.json(serializeElection(election, req.user));
 };
 
-// Get elections by status (delegates to getMany with status preset)
+// Get elections by status (delegates to getElections with a status preset)
 export const getElectionsByStatus = async (req, res, next) => {
   const { status } = req.params;
 
@@ -137,10 +169,10 @@ export const getElectionsByStatus = async (req, res, next) => {
     throw new BadRequestError('Invalid status');
   }
 
-  // Inject status into query so getMany can filter on it
+  // Inject status into the query so getElections can filter on it
   req.query.status = status;
 
-  return getMany(Election)(req, res, next);
+  return getElections(req, res, next);
 };
 
 // Delete election (admin only)
@@ -156,24 +188,18 @@ export const deleteAllElections = async (req, res) => {
   });
 };
 
-// Cast a vote in an election (authenticated user)
+// Cast a vote in an election (authenticated user).
+//
+// This is the single implementation behind both POST /elections/:id/vote and
+// POST /voters/election/:electionId, which is why it accepts either param
+// name. Keeping one hardened path avoids the situation where the alternate
+// route quietly skips a check the main one enforces.
 export const voteElection = async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id || req.params.electionId;
   const { candidateId } = req.body;
 
   if (!candidateId) {
     throw new BadRequestError('candidateId is required');
-  }
-
-  const election = await Election.findById(id);
-
-  if (!election) {
-    throw new NotFoundError('Election not found');
-  }
-
-  // Only allow voting on active elections
-  if (!election.isActive) {
-    throw new BadRequestError('This election is not currently active');
   }
 
   const userId = req.user?.id;
@@ -183,8 +209,15 @@ export const voteElection = async (req, res) => {
     throw new ForbiddenError('You must be authenticated to vote');
   }
 
+  // Prevent admin and sysadmin accounts from voting in elections
+  if (userRole === 'admin' || userRole === 'sysadmin') {
+    throw new ForbiddenError(
+      `${userRole} accounts are not allowed to vote in elections`
+    );
+  }
+
   // Ensure only active users can vote
-  const voter = await User.findById(userId).select('status role');
+  const voter = await User.findById(userId).select('status');
 
   if (!voter) {
     throw new ForbiddenError(
@@ -198,20 +231,10 @@ export const voteElection = async (req, res) => {
     );
   }
 
-  // Prevent admin and sysadmin accounts from voting in elections
-  if (userRole === 'admin' || userRole === 'sysadmin') {
-    throw new ForbiddenError(
-      `${userRole} accounts are not allowed to vote in elections`
-    );
-  }
+  const election = await Election.findById(id);
 
-  // Prevent duplicate voting
-  const alreadyVoted = election.voters.some(
-    (voterId) => String(voterId) === String(userId)
-  );
-
-  if (alreadyVoted) {
-    throw new BadRequestError('You have already voted in this election');
+  if (!election) {
+    throw new NotFoundError('Election not found');
   }
 
   // Ensure candidate exists in this election
@@ -225,15 +248,55 @@ export const voteElection = async (req, res) => {
     );
   }
 
-  // Update voters list and counters
-  election.voters.push(userId);
-  election.voted = (election.voted || 0) + 1;
+  // Record the ballot as a single conditional update rather than a
+  // read-modify-write. Every precondition that must hold at the moment of the
+  // write — the election is open, and this voter is not already on the roll —
+  // is part of the filter, so two ballots arriving at once cannot both read a
+  // stale document and clobber each other's tally.
+  //
+  // The dates, not the stored status, decide whether the election is open. A
+  // status field only moves when something writes to it, so an election whose
+  // start time has passed can still be sitting at `upcoming`; refusing that
+  // ballot would close a poll that is genuinely open. Statuses that must never
+  // accept a ballot regardless of the calendar — draft and cancelled — are
+  // excluded explicitly, and the status is corrected in the same write.
+  const now = new Date();
 
-  // Update results map
-  const currentCount = election.results.get(String(candidateId)) || 0;
-  election.results.set(String(candidateId), currentCount + 1);
+  const updated = await Election.findOneAndUpdate(
+    {
+      _id: id,
+      status: { $in: ['upcoming', 'active'] },
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+      voters: { $ne: userId },
+    },
+    {
+      $set: { status: 'active' },
+      $push: { voters: userId },
+      $inc: { voted: 1, [`results.${candidateId}`]: 1 },
+    },
+    { new: true }
+  );
 
-  await election.save();
+  // A null result means one of the preconditions failed. Re-read the document
+  // to tell the voter which one, rather than returning a generic rejection.
+  if (!updated) {
+    const current = await Election.findById(id).select('status voters');
 
-  res.status(200).json(election);
+    if (!current) {
+      throw new NotFoundError('Election not found');
+    }
+
+    const alreadyVoted = current.voters.some(
+      (voterId) => String(voterId) === String(userId)
+    );
+
+    if (alreadyVoted) {
+      throw new BadRequestError('You have already voted in this election');
+    }
+
+    throw new BadRequestError('This election is not currently open for voting');
+  }
+
+  res.status(200).json(serializeElection(updated, req.user));
 };

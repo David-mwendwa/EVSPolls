@@ -63,7 +63,7 @@ const reducer = (state, action) => {
       };
 
     case 'SUBMIT_VOTE': {
-      const { electionId, results, voterId, updatedElection } = action.payload;
+      const { electionId, results, updatedElection } = action.payload;
 
       const updateOne = (election) => {
         const sameId =
@@ -71,21 +71,15 @@ const reducer = (state, action) => {
           (election.id && String(election.id) === String(electionId));
         if (!sameId) return election;
 
+        // The vote response is already the authoritative post-vote election,
+        // including the refreshed turnout count and the flag marking this
+        // voter as having cast a ballot.
         const base = updatedElection || election;
-
-        const baseVoters = Array.isArray(base.voters) ? base.voters : [];
-        const existingVoters = baseVoters.map((v) => String(v));
-
-        const nextVoters =
-          voterId && !existingVoters.includes(String(voterId))
-            ? [...baseVoters, voterId]
-            : baseVoters;
 
         return {
           ...base,
           results: results ?? base.results,
-          voters: nextVoters,
-          hasVotedForCurrentUser: !!voterId,
+          hasVotedForCurrentUser: true,
         };
       };
 
@@ -254,7 +248,6 @@ export const ElectionProvider = ({ children }) => {
         payload: {
           electionId,
           results: updatedElection.results,
-          voterId,
           updatedElection,
         },
       });

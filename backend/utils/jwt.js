@@ -33,10 +33,18 @@ export const sendToken = (user, statusCode, res) => {
   const token = user.signJWT();
 
   const oneDay = 24 * 60 * 60 * 1000;
+  const lifetimeInDays = Number(process.env.COOKIE_LIFETIME) || 7;
+  const isProduction = /production/i.test(process.env.NODE_ENV);
+
+  // In production the frontend (Netlify) and the API (Render) are different
+  // sites, so the cookie needs SameSite=None to be stored at all — and
+  // SameSite=None is only honoured alongside Secure. Locally both run on
+  // localhost, where Lax works and Secure would block the cookie over http.
   const options = {
-    expires: new Date(Date.now() + process.env.COOKIE_LIFETIME * oneDay),
+    expires: new Date(Date.now() + lifetimeInDays * oneDay),
     httpOnly: true,
-    secure: /production/i.test(process.env.NODE_ENV),
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
   };
 
   user.password = undefined;

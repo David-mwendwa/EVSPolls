@@ -2,7 +2,9 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-const ProtectedRoute = ({ allowedRoles = [], unauthRedirectTo = '/login' }) => {
+// Defaults to '/' because sign-in is a modal on the home page — there is no
+// standalone /login route to redirect to.
+const ProtectedRoute = ({ allowedRoles = [], unauthRedirectTo = '/' }) => {
   const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {

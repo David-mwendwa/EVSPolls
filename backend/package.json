@@ -8,10 +8,11 @@
   "scripts": {
     "start": "NODE_ENV=production node server.js",
     "dev": "nodemon --inspect server.js",
-    "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
+    "test": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test jest --detectOpenHandles --forceExit",
     "format": "prettier --write .",
     "db:restore": "node scripts/restoreSnapshot.js",
     "db:copy": "node scripts/copyDatabase.js",
+    "seed:demo": "node scripts/seedDemoAccounts.js",
     "seed:elections": "node scripts/seedElections.js",
     "seed:users": "node scripts/seedUsers.js",
     "export:elections": "node scripts/exportElections.js",

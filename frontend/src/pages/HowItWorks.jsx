@@ -6,9 +6,9 @@ const HowItWorks = () => {
   const steps = [
     {
       number: '01',
-      title: 'Sign in to EVS',
+      title: 'Sign in to EVSPolls',
       description:
-        'From the homepage, use the "Sign in to EVS" button and sign in with the credentials provided by your institution or the account you signed up with. For demo and testing purposes, sample login credentials are listed on the login page. Your role determines whether you access the voter experience, the admin dashboard, or the system admin console.',
+        'From the homepage, use the "Sign in to EVSPolls" button and sign in with the credentials provided by your institution or the account you signed up with. For demo and testing purposes, sample login credentials are listed on the login page. Your role determines whether you access the voter experience, the admin dashboard, or the system admin console.',
       icon: (
         <svg
           className='w-8 h-8 text-primary-600'
@@ -28,7 +28,7 @@ const HowItWorks = () => {
       number: '02',
       title: 'Go to the Elections page',
       description:
-        'Use the top navigation or the main action button on the homepage ("Sign in to EVS" before signing in and "Browse elections" afterwards) to open the Elections page. Here you will see all elections you are eligible for, along with clear status labels (upcoming, active, completed, or cancelled) and a "You voted" tag where you have already cast a ballot.',
+        'Use the top navigation or the main action button on the homepage ("Sign in to EVSPolls" before signing in and "Browse elections" afterwards) to open the Elections page. Here you will see all elections you are eligible for, along with clear status labels (upcoming, active, completed, or cancelled) and a "You voted" tag where you have already cast a ballot.',
       icon: (
         <svg
           className='w-8 h-8 text-primary-600'
@@ -93,7 +93,7 @@ const HowItWorks = () => {
         <div className='py-16 md:py-20 lg:py-24'>
           <div className='text-center'>
             <h1 className='text-3xl md:text-4xl font-bold text-gray-900 mb-4'>
-              <span className='block'>How EVS works</span>
+              <span className='block'>How EVSPolls works</span>
               <span className='block text-xl md:text-2xl font-semibold text-primary-600 mt-1'>
                 A clear, secure voting experience for your elections
               </span>
@@ -101,7 +101,7 @@ const HowItWorks = () => {
             <p className='mt-3 max-w-2xl mx-auto text-sm sm:text-base md:text-base text-gray-600 md:mt-5'>
               Understand the key steps for signing in, finding the elections you
               are eligible for, casting a secure ballot, and reviewing results
-              in the Electronic Voting System (EVS) &mdash; designed for both
+              in EVSPolls &mdash; designed for both
               security and convenience.
             </p>
           </div>

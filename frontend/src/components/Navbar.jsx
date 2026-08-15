@@ -100,7 +100,7 @@ const Navbar = () => {
                 <div className='absolute inset-0 bg-gradient-to-br from-white/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
                 <div className='absolute -right-2 -top-2 h-6 w-6 rounded-full bg-white/10 transform rotate-12 group-hover:scale-150 transition-all duration-500'></div>
                 <span className='text-white font-bold text-sm md:text-base tracking-tight relative z-10'>
-                  EVS
+                  EV
                 </span>
               </div>
               <span className='ml-3'>
@@ -108,7 +108,7 @@ const Navbar = () => {
                   E-Voting
                 </span>
                 <span className='text-sm md:text-base font-semibold text-gray-800 tracking-tight'>
-                  SecureVote
+                  EVSPolls
                 </span>
               </span>
             </Link>

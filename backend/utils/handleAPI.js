@@ -191,17 +191,23 @@ const getMany = (Model) => async (req, res, next) => {
     .limitFields()
     .paginate(pageSize);
 
-  const doc = await features.query;
+  // Count against the same conditions the query was built from, so `total`
+  // describes the filtered result set rather than the whole collection.
+  const countFilter = features.query.getFilter();
+  const [doc, total] = await Promise.all([
+    features.query,
+    Model.countDocuments(countFilter),
+  ]);
 
   res.status(200).json({
     success: true,
     data: doc,
     meta: {
       pagination: {
-        page: req.query.page || 1,
-        pageSize: req.query.limit || pageSize || 100,
+        page: Number(req.query.page) || 1,
+        pageSize: Number(req.query.limit) || pageSize || 100,
         pageCount: doc.length,
-        total: await Model.countDocuments(),
+        total,
       },
     },
   });

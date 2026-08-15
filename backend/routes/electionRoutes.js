@@ -10,14 +10,20 @@ import {
   voteElection,
   deleteAllElections,
 } from '../controllers/electionController.js';
-import { authenticate, authorizeRoles } from '../middleware/auth.js';
+import {
+  authenticate,
+  optionalAuthenticate,
+  authorizeRoles,
+} from '../middleware/auth.js';
 const router = express.Router();
 
 /******************[ PUBLIC ROUTES ]******************/
-// Anyone can view elections and their status
-router.route('/').get(getElections);
-router.route('/status/:status').get(getElectionsByStatus);
-router.route('/:id').get(getElection);
+// Anyone can view elections and their status. Optional authentication lets a
+// signed-in viewer see which ballots they have already cast, and lets admins
+// see tallies that are still withheld from the public.
+router.route('/').get(optionalAuthenticate, getElections);
+router.route('/status/:status').get(optionalAuthenticate, getElectionsByStatus);
+router.route('/:id').get(optionalAuthenticate, getElection);
 
 // Cast a vote in an election (authenticated users)
 router.route('/:id/vote').post(authenticate, voteElection);

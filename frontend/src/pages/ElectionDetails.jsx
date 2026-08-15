@@ -338,7 +338,7 @@ const ElectionDetails = () => {
 
   if (loading) {
     return (
-      <div className='min-h-screen bg-gray-50 pt-16'>
+      <div className='bg-gray-50'>
         <div className='flex justify-center items-center min-h-screen'>
           <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500'></div>
         </div>
@@ -348,7 +348,7 @@ const ElectionDetails = () => {
 
   if (!election) {
     return (
-      <div className='min-h-screen bg-gray-50 pt-16'>
+      <div className='bg-gray-50'>
         <div className='text-center py-12'>
           <h2 className='text-xl font-medium text-gray-900'>
             Election not found
@@ -413,7 +413,7 @@ const ElectionDetails = () => {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50 pt-16'>
+    <div className='bg-gray-50'>
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         title={deleteTitle}

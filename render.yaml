@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: electronic-voting-system
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URL
+        sync: false
+      - key: MONGO_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_LIFETIME
+        value: 7d
+      - key: COOKIE_LIFETIME
+        value: '7'
+      - key: CORS_ORIGINS
+        value: https://evspolls.netlify.app

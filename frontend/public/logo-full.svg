@@ -1,21 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- EVS Badge -->
-  <g>
-    <rect x="0" y="0" width="50" height="50" rx="8" fill="url(#paint0_linear_1_1)" class="shadow-sm"/>
-    <path d="M12 36V12H18.5V25.2H31.5V12H38V36H31.5V28.5H18.5V36H12Z" fill="white"/>
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>EVSPolls</title>
+  <!-- Mark -->
+  <g transform="translate(0, 5)">
+    <rect width="50" height="50" rx="11" fill="url(#evspolls-logo-mark)"/>
+    <g transform="translate(4.6, 4.6) scale(0.7188)">
+      <path d="M20 30V17a2 2 0 0 1 2-2h20a2 2 0 0 1 2 2v13" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M26.5 23.5l4 4 7.5-7.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 30h36v15a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V30z" fill="#FFFFFF" fill-opacity="0.22"/>
+      <path d="M14 30h36v15a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V30z" stroke="#FFFFFF" stroke-width="3.2" stroke-linejoin="round"/>
+    </g>
   </g>
-  
-  <!-- Text -->
-  <g font-family="sans-serif">
-    <text x="65" y="18" font-size="10" font-weight="500" fill="#6B7280" text-transform="uppercase" letter-spacing="0.05em">E-Voting</text>
-    <text x="65" y="35" font-size="16" font-weight="600" fill="#1F2937" letter-spacing="-0.01em">SecureVote</text>
+
+  <!-- Wordmark -->
+  <g font-family="Raleway, system-ui, sans-serif">
+    <text x="64" y="24" font-size="10" font-weight="500" fill="#6B7280" letter-spacing="0.09em">E-VOTING</text>
+    <text x="64" y="43" font-size="19" font-weight="700" fill="#111827" letter-spacing="-0.015em">EVSPolls</text>
   </g>
-  
+
   <defs>
-    <linearGradient id="paint0_linear_1_1" x1="0" y1="0" x2="50" y2="50" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4F46E5"/>
-      <stop offset="1" stop-color="#7C3AED"/>
+    <linearGradient id="evspolls-logo-mark" x1="0" y1="0" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#0369A1"/>
     </linearGradient>
   </defs>
 </svg>

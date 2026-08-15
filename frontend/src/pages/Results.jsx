@@ -5,17 +5,19 @@ import api from '../api/apiClient';
 import { Spinner } from '../components/ui/Loaders';
 import { toast } from 'react-toastify';
 import {
-  FiArrowLeft,
   FiBarChart2,
   FiAward,
   FiUsers,
   FiCalendar,
-  FiClock,
-  FiHome,
+  FiPrinter,
   FiDownload,
 } from 'react-icons/fi';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import PageHeader from '../components/ui/PageHeader';
+import Card, { CardHeader } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import StatCard from '../components/ui/StatCard';
+import StatusBadge from '../components/ui/StatusBadge';
+import { formatDate } from '../utils/election';
 
 const Results = () => {
   const { electionId } = useParams();
@@ -26,7 +28,15 @@ const Results = () => {
   const [results, setResults] = useState([]);
   const [totalVotes, setTotalVotes] = useState(0);
 
-  const generateReport = () => {
+  // jsPDF and its autotable plugin are the bulk of this page's weight, and
+  // most viewers only read the results on screen. Pulling them in when the
+  // download is actually requested keeps them out of the initial load.
+  const generateReport = async () => {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+
     // Create a new PDF document
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -169,16 +179,17 @@ const Results = () => {
     doc.save(`election-results-${election.id}.pdf`);
   };
 
-  // Color palette for charts
+  // Every bar on this chart measures the same thing — votes for a candidate —
+  // so eight unrelated hues (blue, green, yellow, purple…) implied a
+  // distinction that does not exist and made the leader no easier to spot.
+  // One hue, stepped down by rank, encodes the only thing that matters here:
+  // who is ahead. Candidates past the ramp share the lightest step.
   const chartColors = [
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-yellow-500',
-    'bg-purple-500',
-    'bg-pink-500',
-    'bg-indigo-500',
-    'bg-red-500',
-    'bg-teal-500',
+    'bg-primary-600',
+    'bg-primary-500',
+    'bg-primary-400',
+    'bg-primary-300',
+    'bg-primary-200',
   ];
 
   useEffect(() => {
@@ -281,23 +292,11 @@ const Results = () => {
 
     loadElection();
   }, [electionId, navigate, getElectionById, electionsLoading]);
-
-  const formatDate = (dateString) => {
-    const options = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-
   // While resolving the election (including on refresh), keep showing loader.
   // True not-found cases are handled in loadElection via toast + navigate('/').
   if (isLoading || !election) {
     return (
-      <div className='min-h-screen bg-gray-50 pt-16 flex items-center justify-center'>
+      <div className='bg-gray-50 flex items-center justify-center'>
         <Spinner />
       </div>
     );
@@ -323,379 +322,156 @@ const Results = () => {
     totalEligibleVoters > 0 ? (votesCount / totalEligibleVoters) * 100 : 0;
   const leadingCandidate = results[0];
   const isTie = results.length > 1 && results[0].votes === results[1].votes;
+  const tiedCandidates = results.filter(
+    (candidate) => candidate.votes === leadingCandidate?.votes
+  );
+
+  const isFinal = String(election.status || '').toLowerCase() === 'completed';
 
   return (
-    <div className='min-h-screen bg-gray-50 pt-16'>
-      <div className='max-w-6xl mx-auto px-3 sm:px-4 pb-8 sm:pb-12'>
-        {/* Header */}
-        <div className='mb-4 sm:mb-6'>
-          <button
-            onClick={() => navigate('/elections')}
-            className='inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 mb-3 py-1.5'>
-            <FiArrowLeft className='mr-1.5 h-4 w-4' /> Back to Elections
-          </button>
+    <div className='py-8 max-w-5xl mx-auto'>
+      <PageHeader
+        title={election.title}
+        description={election.description}
+        back={{ to: '/elections', label: 'Back to elections' }}
+        meta={
+          <div className='flex flex-wrap items-center gap-3'>
+            <StatusBadge status={election.status} />
+            <span className='inline-flex items-center gap-1.5 text-xs text-gray-500'>
+              <FiCalendar className='w-3.5 h-3.5' aria-hidden='true' />
+              {formatDate(election.startDate)} – {formatDate(election.endDate)}
+            </span>
+          </div>
+        }
+        actions={
+          <>
+            <Button
+              variant='secondary'
+              size='sm'
+              icon={FiPrinter}
+              onClick={() => window.print()}>
+              Print
+            </Button>
+            <Button size='sm' icon={FiDownload} onClick={generateReport}>
+              Report
+            </Button>
+          </>
+        }
+      />
 
-          <div className='bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4'>
-            <div className='flex flex-col md:flex-row md:items-center md:justify-between'>
-              <div className='mb-4 md:mb-0'>
-                <h1 className='text-2xl sm:text-3xl font-bold text-gray-900'>
-                  {election.title}
-                </h1>
-                <p className='mt-1 text-sm sm:text-base text-gray-600 line-clamp-2'>
-                  {election.description}
-                </p>
+      {/* Turnout was previously stated three times over — a header chip, a
+          sidebar figure and a progress bar. It is reported once, here. */}
+      <div className='grid gap-4 sm:grid-cols-3 mb-6'>
+        <StatCard
+          label='Votes cast'
+          value={votesCount.toLocaleString()}
+          caption={`across ${results.length} candidates`}
+          icon={FiBarChart2}
+        />
+        <StatCard
+          label='Turnout'
+          value={`${turnout.toFixed(1)}%`}
+          caption={`of ${totalEligibleVoters.toLocaleString()} eligible voters`}
+          icon={FiUsers}
+          tone='success'
+        />
+        <StatCard
+          label={isFinal ? 'Winner' : 'Currently leading'}
+          value={
+            <span className='text-xl leading-tight block truncate'>
+              {isTie ? 'Tied' : leadingCandidate?.name || '—'}
+            </span>
+          }
+          caption={
+            isTie
+              ? `${tiedCandidates.length} candidates level on ${leadingCandidate?.votes ?? 0} votes`
+              : leadingCandidate
+                ? `${leadingCandidate.votes.toLocaleString()} votes · ${leadingCandidate.percentage.toFixed(1)}%`
+                : 'No votes yet'
+          }
+          icon={FiAward}
+          tone='warning'
+        />
+      </div>
 
-                <div className='mt-3 flex flex-col sm:flex-row sm:flex-wrap gap-2 text-xs sm:text-sm text-gray-500'>
-                  <div className='flex items-center'>
-                    <FiCalendar className='mr-1.5 h-3.5 w-3.5 flex-shrink-0' />
-                    <span>
-                      {formatDate(election.startDate)} -{' '}
-                      {formatDate(election.endDate)}
+      {/* One ranked list replaces the previous pair of blocks, which showed the
+          same numbers twice — once as bars, once as a table. */}
+      <Card padded={false}>
+        <div className='px-5 pt-5'>
+          <CardHeader
+            title={isFinal ? 'Final result' : 'Live standing'}
+            description={
+              votesCount === 0
+                ? 'No votes have been cast yet.'
+                : 'Ranked by votes received. Bars are shown relative to the total cast.'
+            }
+          />
+        </div>
+
+        <ol className='divide-y divide-gray-100'>
+          {results.map((candidate, index) => {
+            const isLeader = index === 0 && candidate.votes > 0;
+
+            return (
+              <li
+                key={candidate._id || candidate.id || index}
+                className='px-5 py-4'>
+                <div className='flex items-center gap-3 mb-2'>
+                  <span
+                    className='flex-shrink-0 h-7 w-7 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold flex items-center justify-center tabular-nums'
+                    aria-hidden='true'>
+                    {index + 1}
+                  </span>
+
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex items-center gap-2 flex-wrap'>
+                      <span className='text-sm font-semibold text-gray-900 truncate'>
+                        {candidate.name}
+                      </span>
+                      {isLeader && (
+                        <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-success-50 text-success-700 ring-1 ring-success-200'>
+                          <FiAward className='h-3 w-3' aria-hidden='true' />
+                          {isTie ? 'Tied' : isFinal ? 'Winner' : 'Leading'}
+                        </span>
+                      )}
+                    </div>
+                    <span className='block text-xs text-gray-500 truncate'>
+                      {candidate.party || 'Independent'}
                     </span>
                   </div>
-                  <div className='flex items-center'>
-                    <FiUsers className='mr-1.5 h-3.5 w-3.5 flex-shrink-0' />
-                    <span>
-                      {totalEligibleVoters.toLocaleString()} eligible voters
+
+                  <div className='text-right flex-shrink-0'>
+                    <span className='block text-sm font-semibold text-gray-900 tabular-nums'>
+                      {candidate.percentage.toFixed(1)}%
+                    </span>
+                    <span className='block text-xs text-gray-500 tabular-nums'>
+                      {candidate.votes.toLocaleString()}{' '}
+                      {candidate.votes === 1 ? 'vote' : 'votes'}
                     </span>
                   </div>
                 </div>
-              </div>
 
-              <div className='mt-2 md:mt-0 bg-primary-50 px-3 py-2 sm:px-3 sm:py-2.5 rounded-md'>
-                <div className='text-[11px] sm:text-xs font-medium text-gray-600 mb-0.5'>
-                  Turnout
-                </div>
-                <div className='flex items-baseline'>
-                  <span className='text-xl sm:text-2xl font-bold text-primary-700'>
-                    {turnout.toFixed(1)}%
-                  </span>
-                  <span className='ml-2 text-[11px] sm:text-xs text-gray-500'>
-                    ({votesCount.toLocaleString()} of{' '}
-                    {totalEligibleVoters.toLocaleString()} eligible voters)
-                  </span>
-                </div>
-                <div className='w-full bg-gray-200 rounded-full h-1.5 mt-1.5'>
+                <div
+                  className='w-full bg-gray-100 rounded-full h-2 overflow-hidden'
+                  role='img'
+                  aria-label={`${candidate.name}: ${candidate.percentage.toFixed(1)} percent`}>
                   <div
-                    className='bg-primary-600 h-full rounded-full'
-                    style={{ width: `${Math.min(100, turnout)}%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      chartColors[Math.min(index, chartColors.length - 1)]
+                    }`}
+                    style={{ width: `${Math.max(candidate.percentage, 0)}%` }}
                   />
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
 
-        {/* Main Content */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6'>
-          {/* Results Summary */}
-          <div className='lg:col-span-2 space-y-4 sm:space-y-6'>
-            <div className='bg-white rounded-xl shadow-sm overflow-hidden'>
-              <div className='px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200'>
-                <h2 className='text-base sm:text-lg font-medium text-gray-900 flex items-center'>
-                  <FiBarChart2 className='mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary-600' />
-                  Vote Distribution
-                </h2>
-              </div>
-              <div className='px-4 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4'>
-                {results.map((candidate, index) => (
-                  <div
-                    key={candidate._id || candidate.id || index}
-                    className='space-y-1.5'>
-                    <div className='flex flex-col xs:flex-row xs:items-center xs:justify-between'>
-                      <div className='flex items-center'>
-                        <div
-                          className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${chartColors[index % chartColors.length]} mr-2`}></div>
-                        <span className='text-sm sm:text-base font-medium text-gray-900 line-clamp-1'>
-                          {candidate.name}
-                          {index === 0 && !isTie && (
-                            <span className='ml-1.5 sm:ml-2 inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-green-100 text-green-800'>
-                              <FiAward className='mr-0.5 sm:mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3' />
-                              {isTie ? 'Tied' : 'Leading'}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div className='text-xs sm:text-sm text-gray-500 mt-0.5 xs:mt-0 xs:ml-2'>
-                        {candidate.votes.toLocaleString()} votes (
-                        {candidate.percentage.toFixed(1)}%)
-                      </div>
-                    </div>
-                    <div className='w-full bg-gray-100 rounded-full h-2 sm:h-2.5'>
-                      <div
-                        className={`h-full rounded-full ${chartColors[index % chartColors.length]}`}
-                        style={{ width: `${candidate.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Detailed Results Table */}
-            <div className='bg-white rounded-xl shadow-sm overflow-hidden'>
-              <div className='px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200'>
-                <h2 className='text-base sm:text-lg font-medium text-gray-900'>
-                  Detailed Results
-                </h2>
-              </div>
-              <div className='overflow-x-auto -mx-2 sm:-mx-0'>
-                <div className='inline-block min-w-full align-middle px-2 sm:px-0'>
-                  <table className='min-w-full divide-y divide-gray-200 text-sm'>
-                    <thead className='bg-gray-50'>
-                      <tr>
-                        <th
-                          scope='col'
-                          className='px-3 py-2.5 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                          Candidate
-                        </th>
-                        <th
-                          scope='col'
-                          className='px-2 py-2.5 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                          Party
-                        </th>
-                        <th
-                          scope='col'
-                          className='px-2 py-2.5 sm:px-4 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                          Votes
-                        </th>
-                        <th
-                          scope='col'
-                          className='px-2 py-2.5 sm:px-4 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                          %
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className='bg-white divide-y divide-gray-200'>
-                      {results.map((candidate, index) => (
-                        <tr
-                          key={candidate._id || candidate.id || index}
-                          className={
-                            index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                          }>
-                          <td className='px-3 py-2.5 sm:px-4 sm:py-3 whitespace-nowrap'>
-                            <div className='flex items-center'>
-                              <div className='flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs sm:text-sm font-medium'>
-                                {candidate.name.charAt(0)}
-                              </div>
-                              <div className='ml-2 sm:ml-3'>
-                                <div className='text-xs sm:text-sm font-medium text-gray-900 line-clamp-1'>
-                                  {candidate.name}
-                                </div>
-                                <div className='text-[10px] sm:text-xs text-gray-500'>
-                                  #{index + 1}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className='px-2 py-2.5 sm:px-4 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500'>
-                            {candidate.party || 'Ind'}
-                          </td>
-                          <td className='px-2 py-2.5 sm:px-4 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm text-gray-900 font-medium'>
-                            {candidate.votes.toLocaleString()}
-                          </td>
-                          <td className='px-2 py-2.5 sm:px-4 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm font-medium'>
-                            <span
-                              className={`px-1.5 py-0.5 sm:px-2 sm:py-1 inline-flex text-[10px] sm:text-xs leading-4 font-semibold rounded-full ${
-                                index === 0 && !isTie
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
-                              {candidate.percentage.toFixed(1)}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className='space-y-4 sm:space-y-6'>
-            {/* Winner Card */}
-            <div className='bg-white rounded-xl shadow-sm overflow-hidden'>
-              <div className='px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200'>
-                <h2 className='text-base sm:text-lg font-medium text-gray-900 flex items-center'>
-                  <FiAward className='mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500' />
-                  {isTie ? 'Tied Candidates' : 'Election Winner'}
-                </h2>
-              </div>
-              <div className='p-4 sm:p-5'>
-                {isTie ? (
-                  <div className='text-center'>
-                    <div className='mx-auto h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-500 mb-3'>
-                      <FiAward className='h-5 w-5 sm:h-6 sm:w-6' />
-                    </div>
-                    <h3 className='text-base sm:text-lg font-medium text-gray-900 mb-1.5'>
-                      Tied Election
-                    </h3>
-                    <p className='text-xs sm:text-sm text-gray-600 mb-3'>
-                      Top{' '}
-                      {
-                        results.filter(
-                          (r) => r.votes === leadingCandidate.votes
-                        ).length
-                      }{' '}
-                      candidates tied with {leadingCandidate.votes} votes each.
-                    </p>
-                    <div className='space-y-2'>
-                      {results
-                        .filter((r) => r.votes === leadingCandidate.votes)
-                        .map((candidate, index) => (
-                          <div
-                            key={candidate._id || candidate.id || index}
-                            className='flex items-center p-2 sm:p-3 bg-gray-50 rounded-lg'>
-                            <div
-                              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${chartColors[index % chartColors.length]} flex items-center justify-center text-white font-medium text-xs sm:text-sm`}>
-                              {candidate.name.charAt(0)}
-                            </div>
-                            <div className='ml-2 sm:ml-3 min-w-0'>
-                              <div className='text-xs sm:text-sm font-medium text-gray-900 truncate'>
-                                {candidate.name}
-                              </div>
-                              <div className='text-[10px] sm:text-xs text-gray-500 truncate'>
-                                {candidate.party || 'Independent'}
-                              </div>
-                            </div>
-                            <div className='ml-auto text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap pl-2'>
-                              {candidate.percentage.toFixed(1)}%
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className='text-center'>
-                    <div className='mx-auto h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-green-100 flex items-center justify-center text-green-500 mb-3 sm:mb-4'>
-                      <FiAward className='h-10 w-10 sm:h-12 sm:w-12' />
-                    </div>
-                    <h3 className='text-lg sm:text-xl font-bold text-gray-900 mb-1'>
-                      {leadingCandidate.name}
-                    </h3>
-                    <p className='text-sm text-gray-600 mb-3 sm:mb-4'>
-                      {leadingCandidate.party || 'Independent'}
-                    </p>
-                    <div className='bg-green-50 rounded-lg p-3'>
-                      <div className='text-xs sm:text-sm font-medium text-gray-600 mb-1'>
-                        Votes Received
-                      </div>
-                      <div className='flex flex-col sm:flex-row sm:items-baseline sm:justify-center'>
-                        <span className='text-xl sm:text-2xl font-bold text-green-700'>
-                          {leadingCandidate.votes.toLocaleString()}
-                        </span>
-                        <span className='text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-0 sm:ml-2'>
-                          ({leadingCandidate.percentage.toFixed(1)}% of total)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Election Stats */}
-            <div className='bg-white rounded-xl shadow-sm overflow-hidden'>
-              <div className='px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200'>
-                <h2 className='text-base sm:text-lg font-medium text-gray-900'>
-                  Election Stats
-                </h2>
-              </div>
-              <div className='p-4 sm:p-5 space-y-3 sm:space-y-4'>
-                <div>
-                  <div className='text-xs sm:text-sm font-medium text-gray-500'>
-                    Total Votes Cast
-                  </div>
-                  <div className='mt-0.5 text-lg sm:text-xl font-semibold text-gray-900'>
-                    {totalVotes.toLocaleString()}
-                  </div>
-                </div>
-                <div>
-                  <div className='text-xs sm:text-sm font-medium text-gray-500'>
-                    Voter Turnout
-                  </div>
-                  <div className='mt-0.5'>
-                    <div className='text-lg sm:text-xl font-semibold text-gray-900'>
-                      {turnout.toFixed(1)}%
-                    </div>
-                    <div className='text-xs sm:text-sm text-gray-500 mt-0.5'>
-                      {votesCount.toLocaleString()} of{' '}
-                      {totalEligibleVoters.toLocaleString()} eligible voters
-                    </div>
-                  </div>
-                  <div className='w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mt-2'>
-                    <div
-                      className='bg-primary-600 h-full rounded-full'
-                      style={{ width: `${Math.min(100, turnout)}%` }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className='text-xs sm:text-sm font-medium text-gray-500 mb-1'>
-                    Voting Period
-                  </div>
-                  <div className='space-y-1 text-xs sm:text-sm'>
-                    <div className='flex items-start'>
-                      <FiCalendar className='mt-0.5 mr-1.5 h-3.5 w-3.5 text-gray-400 flex-shrink-0' />
-                      <span>{formatDate(election.startDate)}</span>
-                    </div>
-                    <div className='flex items-start'>
-                      <FiCalendar className='mt-0.5 mr-1.5 h-3.5 w-3.5 text-gray-400 flex-shrink-0' />
-                      <span>{formatDate(election.endDate)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className='bg-white rounded-xl shadow-sm overflow-hidden'>
-              <div className='px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200'>
-                <h2 className='text-base sm:text-lg font-medium text-gray-900'>
-                  Actions
-                </h2>
-              </div>
-              <div className='p-4 space-y-2'>
-                <button
-                  onClick={() => window.print()}
-                  className='w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 active:bg-gray-100 transition-colors'>
-                  <svg
-                    className='mr-2 h-4 w-4 text-gray-500'
-                    fill='none'
-                    stroke='currentColor'
-                    viewBox='0 0 24 24'
-                    xmlns='http://www.w3.org/2000/svg'>
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth={2}
-                      d='M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z'
-                    />
-                  </svg>
-                  Print Results
-                </button>
-                <button
-                  onClick={generateReport}
-                  className='w-full flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 active:bg-primary-800 transition-colors'>
-                  <FiDownload className='mr-2 h-4 w-4' />
-                  Download Report
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className='mt-6 sm:mt-8 text-center text-xs text-gray-500 pb-4 sm:pb-6'>
-          <p>
-            Results as of {new Date().toLocaleDateString()} at{' '}
-            {new Date().toLocaleTimeString()}
-          </p>
-          <p className='mt-0.5'>Election ID: {electionId}</p>
-        </div>
-      </div>
+      <p className='mt-6 text-center text-xs text-gray-400'>
+        {isFinal ? 'Final results' : 'Live results'} · updated{' '}
+        {new Date().toLocaleTimeString()}
+      </p>
     </div>
   );
 };

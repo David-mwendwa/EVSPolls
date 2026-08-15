@@ -56,11 +56,31 @@
     @apply text-primary-600 hover:text-primary-700 transition-colors duration-200;
   }
 
+  /* focus-visible, not focus: `:focus` also matches a mouse click, which put a
+     ring on every button and icon the moment it was pressed. Keyboard users
+     still get the ring; pointer users do not. */
   button,
   [type='button'],
   [type='reset'],
   [type='submit'] {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200;
+    @apply outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-all duration-200;
+  }
+
+  /* Individual components across the app also carry their own `focus:ring-*`
+     utilities, which would win over the rule above. Zeroing Tailwind's ring
+     variables when focus did not come from the keyboard suppresses those too,
+     without having to touch every call site. Only the ring variables are
+     cleared, so a button's own drop shadow survives. */
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible),
+  [role='button']:focus:not(:focus-visible),
+  [type='button']:focus:not(:focus-visible),
+  [type='reset']:focus:not(:focus-visible),
+  [type='submit']:focus:not(:focus-visible) {
+    outline: none;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-ring-offset-width: 0px;
   }
 
   input,
@@ -86,15 +106,15 @@
 @layer components {
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-md hover:shadow-lg;
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-md hover:shadow-lg;
   }
 
   .btn-secondary {
-    @apply bg-white text-primary-600 border border-primary-600 hover:bg-primary-50 focus:ring-primary-500;
+    @apply bg-white text-primary-600 border border-primary-600 hover:bg-primary-50 focus-visible:ring-primary-500;
   }
 
   /* Cards */

@@ -1,56 +1,167 @@
-import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import { useElection } from '../context/ElectionContext.jsx';
-import { useAuth } from '../context/AuthContext.jsx';
-import { Spinner, TableSkeleton } from '../components/ui/Loaders.jsx';
-import { format, parseISO } from 'date-fns';
-import { FiCheckCircle, FiBarChart2, FiEye } from 'react-icons/fi';
+import { TableSkeleton } from '../components/ui/Loaders.jsx';
+import {
+  FiCheckCircle,
+  FiBarChart2,
+  FiClock,
+  FiInbox,
+  FiUsers,
+  FiAlertCircle,
+} from 'react-icons/fi';
+import PageHeader from '../components/ui/PageHeader.jsx';
+import StatusBadge from '../components/ui/StatusBadge.jsx';
+import FilterTabs from '../components/ui/FilterTabs.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
+import Button from '../components/ui/Button.jsx';
+import Card from '../components/ui/Card.jsx';
+import {
+  sortForVoter,
+  timingLabel,
+  formatDate,
+  turnoutOf,
+} from '../utils/election.js';
 
-const statusStyles = {
-  draft: 'bg-yellow-100 text-yellow-800',
-  upcoming: 'bg-blue-100 text-blue-800',
-  active: 'bg-green-100 text-green-800',
-  completed: 'bg-gray-100 text-gray-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'open', label: 'Open', statuses: ['active'] },
+  { id: 'upcoming', label: 'Upcoming', statuses: ['upcoming'] },
+  { id: 'closed', label: 'Closed', statuses: ['completed', 'cancelled'] },
+];
 
-const getStatusPill = (status) => {
-  const normalized = (status || '').toLowerCase();
-  const label =
-    status && typeof status === 'string'
-      ? status.charAt(0).toUpperCase() + status.slice(1)
-      : 'Unknown';
+/**
+ * One election in the list.
+ *
+ * The card leads with what the voter can do about it. Every card previously
+ * repeated a sentence of boilerplate ("This election has ended. You can view
+ * the final results.") which added a line of noise per row without saying
+ * anything the status pill did not.
+ */
+const ElectionCard = ({ election, hasVoted }) => {
+  const id = election._id || election.id;
+  const status = String(election.status || '').toLowerCase();
+  const timing = timingLabel(election);
+
+  const isOpen = status === 'active';
+  const isClosed = status === 'completed';
+  const { votes } = turnoutOf(election);
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-        statusStyles[normalized] || 'bg-gray-100 text-gray-800'
-      }`}>
-      {label}
-    </span>
+    <Card
+      interactive
+      padded={false}
+      className='flex flex-col h-full overflow-hidden'>
+      <div className='p-5 flex-1 flex flex-col'>
+        <div className='flex items-start justify-between gap-3 mb-3'>
+          <StatusBadge status={election.status} />
+          {hasVoted && (
+            <span className='inline-flex items-center gap-1 text-xs font-medium text-success-700'>
+              <FiCheckCircle className='w-3.5 h-3.5' aria-hidden='true' />
+              You voted
+            </span>
+          )}
+        </div>
+
+        <h2 className='text-base font-semibold text-gray-900 leading-snug mb-1.5'>
+          {election.title || 'Untitled election'}
+        </h2>
+
+        <p className='text-sm text-gray-600 line-clamp-2 mb-4'>
+          {election.description || 'No description provided.'}
+        </p>
+
+        {/* Timing and turnout sit together at the bottom so cards in a row
+            line up regardless of how long the description runs. */}
+        <div className='mt-auto space-y-2'>
+          <p
+            className={`flex items-center gap-1.5 text-xs mb-0 ${
+              timing.urgent ? 'text-warning-700 font-medium' : 'text-gray-500'
+            }`}>
+            <FiClock className='w-3.5 h-3.5 flex-shrink-0' aria-hidden='true' />
+            {timing.text}
+          </p>
+          <p className='flex items-center gap-1.5 text-xs text-gray-500 mb-0'>
+            <FiUsers className='w-3.5 h-3.5 flex-shrink-0' aria-hidden='true' />
+            {votes.toLocaleString()} {votes === 1 ? 'vote' : 'votes'} cast
+            <span className='text-gray-300'>·</span>
+            {formatDate(election.startDate)} – {formatDate(election.endDate)}
+          </p>
+        </div>
+      </div>
+
+      <div className='px-5 py-3 border-t border-gray-100 bg-gray-50/60'>
+        {isOpen && !hasVoted && (
+          <Button to={`/vote/${id}`} size='sm' block icon={FiCheckCircle}>
+            Cast your vote
+          </Button>
+        )}
+        {isOpen && hasVoted && (
+          <Button
+            to={`/results/${id}`}
+            size='sm'
+            variant='secondary'
+            block
+            icon={FiBarChart2}>
+            View live results
+          </Button>
+        )}
+        {isClosed && (
+          <Button
+            to={`/results/${id}`}
+            size='sm'
+            variant='secondary'
+            block
+            icon={FiBarChart2}>
+            View final results
+          </Button>
+        )}
+        {!isOpen && !isClosed && (
+          <p className='text-xs text-gray-500 text-center mb-0 py-1'>
+            {status === 'cancelled'
+              ? 'This election was cancelled.'
+              : 'Voting has not opened yet.'}
+          </p>
+        )}
+      </div>
+    </Card>
   );
 };
 
 const Elections = () => {
-  const navigate = useNavigate();
   const { elections, loading, error } = useElection();
-  const { user } = useAuth();
+  const [filter, setFilter] = useState('all');
 
-  const currentUserId = user?._id || user?.id || null;
+  const ordered = useMemo(
+    () => sortForVoter(Array.isArray(elections) ? elections : []),
+    [elections]
+  );
 
-  const sortedElections = useMemo(() => {
-    if (!Array.isArray(elections)) return [];
+  const counts = useMemo(() => {
+    const tally = { all: ordered.length };
 
-    return [...elections].sort((a, b) => {
-      const aStart = a.startDate ? new Date(a.startDate).getTime() : 0;
-      const bStart = b.startDate ? new Date(b.startDate).getTime() : 0;
-      return aStart - bStart;
+    FILTERS.filter((f) => f.statuses).forEach((f) => {
+      tally[f.id] = ordered.filter((e) =>
+        f.statuses.includes(String(e.status || '').toLowerCase())
+      ).length;
     });
-  }, [elections]);
+
+    return tally;
+  }, [ordered]);
+
+  const visible = useMemo(() => {
+    const active = FILTERS.find((f) => f.id === filter);
+    if (!active?.statuses) return ordered;
+
+    return ordered.filter((e) =>
+      active.statuses.includes(String(e.status || '').toLowerCase())
+    );
+  }, [ordered, filter]);
+
+  const openCount = counts.open || 0;
 
   if (loading) {
     return (
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12'>
+      <div className='py-8'>
         <TableSkeleton />
       </div>
     );
@@ -58,188 +169,79 @@ const Elections = () => {
 
   if (error) {
     return (
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12'>
-        <div className='bg-red-50 border-l-4 border-red-400 p-4 rounded-md'>
-          <p className='text-sm text-red-700'>
-            There was a problem loading elections. Please try again or contact
-            your administrator.
-          </p>
-        </div>
+      <div className='py-8'>
+        <EmptyState
+          icon={FiAlertCircle}
+          title='We could not load your elections'
+          description='Something went wrong reaching the server. Refresh the page, or contact your administrator if it keeps happening.'
+          action={
+            <Button onClick={() => window.location.reload()}>Try again</Button>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen bg-gray-50 pt-20 pb-12'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        {/* Page header */}
-        <div className='mb-8 text-center'>
-          <h1 className='text-3xl md:text-4xl font-bold text-gray-900 mb-2'>
-            Elections
-          </h1>
-          <p className='text-sm md:text-base text-gray-600 max-w-2xl mx-auto'>
-            Here you can see all elections you are allowed to participate in.
-            Each election shows its status and key dates. When an election is
-            active, you can open it and cast your vote.
-          </p>
+    <div className='py-8'>
+      <PageHeader
+        title='Elections'
+        description={
+          openCount > 0
+            ? `You have ${openCount} ${
+                openCount === 1 ? 'ballot' : 'ballots'
+              } open for voting.`
+            : 'Every election you are eligible for, newest activity first.'
+        }
+        meta={
+          ordered.length > 0 && (
+            <FilterTabs
+              label='Filter elections by status'
+              options={FILTERS.map((f) => ({
+                id: f.id,
+                label: f.label,
+                count: counts[f.id] ?? 0,
+              }))}
+              value={filter}
+              onChange={setFilter}
+            />
+          )
+        }
+      />
+
+      {ordered.length === 0 && (
+        <EmptyState
+          icon={FiInbox}
+          title='No elections yet'
+          description='Once an administrator publishes an election for your organisation, it will appear here.'
+          action={<Button to='/'>Back to home</Button>}
+        />
+      )}
+
+      {ordered.length > 0 && visible.length === 0 && (
+        <EmptyState
+          icon={FiInbox}
+          title='Nothing in this view'
+          description='There are no elections with this status right now.'
+          action={
+            <Button variant='secondary' onClick={() => setFilter('all')}>
+              Show all elections
+            </Button>
+          }
+        />
+      )}
+
+      {visible.length > 0 && (
+        <div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+          {visible.map((election) => (
+            <ElectionCard
+              key={election._id || election.id}
+              election={election}
+              hasVoted={!!election.hasVotedForCurrentUser}
+            />
+          ))}
         </div>
-
-        {/* Empty state */}
-        {sortedElections.length === 0 && (
-          <div className='bg-white rounded-lg shadow-sm p-8 text-center'>
-            <h2 className='text-lg font-semibold text-gray-900 mb-2'>
-              No elections available yet
-            </h2>
-            <p className='text-sm text-gray-500 mb-4'>
-              Once an administrator creates and publishes elections for your
-              organization, they will appear here.
-            </p>
-            <Link
-              to='/'
-              className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'>
-              Back to Home
-            </Link>
-          </div>
-        )}
-
-        {/* Elections list */}
-        {sortedElections.length > 0 && (
-          <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
-            {sortedElections.map((election) => {
-              const id = election._id || election.id;
-              const status = (election.status || '').toLowerCase();
-              const isActive = status === 'active';
-              const isCompleted = status === 'completed';
-              const hasVoted =
-                !!currentUserId &&
-                (election.hasVotedForCurrentUser ||
-                  (Array.isArray(election.voters) &&
-                    election.voters.some(
-                      (voterId) => String(voterId) === String(currentUserId)
-                    )));
-
-              return (
-                <div
-                  key={id}
-                  className='bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col h-full'>
-                  <div className='p-5 flex-1 flex flex-col'>
-                    <div className='mb-2'>
-                      <h2 className='text-base sm:text-lg font-semibold text-gray-900 mr-2 line-clamp-2'>
-                        {election.title || 'Untitled Election'}
-                      </h2>
-                    </div>
-                    <div className='flex items-center justify-between mb-3'>
-                      <div>{getStatusPill(election.status)}</div>
-                      {hasVoted && (
-                        <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-green-50 text-green-700 border border-green-200'>
-                          You voted
-                        </span>
-                      )}
-                    </div>
-
-                    {election.description && (
-                      <p className='text-sm text-gray-600 mb-3 line-clamp-3'>
-                        {election.description}
-                      </p>
-                    )}
-
-                    <div className='mt-auto space-y-1 text-xs text-gray-500'>
-                      {election.startDate && (
-                        <p>
-                          <span className='font-medium text-gray-700'>
-                            Starts:
-                          </span>{' '}
-                          {format(
-                            parseISO(election.startDate),
-                            'MMM d, yyyy HH:mm'
-                          )}
-                        </p>
-                      )}
-                      {election.endDate && (
-                        <p>
-                          <span className='font-medium text-gray-700'>
-                            Ends:
-                          </span>{' '}
-                          {format(
-                            parseISO(election.endDate),
-                            'MMM d, yyyy HH:mm'
-                          )}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className='px-5 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3'>
-                    <p className='text-xs text-gray-500'>
-                      {hasVoted
-                        ? 'You have already voted in this election. You can review the final results.'
-                        : isActive
-                          ? 'This election is currently open for voting.'
-                          : status === 'upcoming'
-                            ? 'This election will open soon. Check back later to vote.'
-                            : isCompleted
-                              ? 'This election has ended. You can view the final results.'
-                              : status === 'cancelled'
-                                ? 'This election has been cancelled by the administrator.'
-                                : 'Election details are managed by your administrator.'}
-                    </p>
-                    <button
-                      type='button'
-                      disabled={status === 'cancelled' || status === 'upcoming'}
-                      onClick={() => {
-                        if (status === 'cancelled' || status === 'upcoming')
-                          return;
-                        if (hasVoted || isCompleted) {
-                          navigate(`/results/${id}`);
-                        } else {
-                          navigate(`/vote/${id}`);
-                        }
-                      }}
-                      className={`ml-4 inline-flex items-center px-3 py-2 text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 whitespace-nowrap ${
-                        status === 'cancelled' || status === 'upcoming'
-                          ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed focus:ring-gray-300'
-                          : hasVoted
-                            ? 'border-transparent text-white bg-green-600 hover:bg-green-700 focus:ring-green-500'
-                            : isActive
-                              ? 'border-transparent text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500'
-                              : isCompleted
-                                ? 'border-blue-500 text-blue-600 bg-white hover:bg-blue-50 focus:ring-blue-500'
-                                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-primary-500'
-                      }`}>
-                      {status === 'cancelled' ? (
-                        <>
-                          <FiEye className='mr-1.5 h-3.5 w-3.5' />
-                          <span>Cancelled</span>
-                        </>
-                      ) : status === 'upcoming' ? (
-                        <>
-                          <FiEye className='mr-1.5 h-3.5 w-3.5' />
-                          <span>Not open yet</span>
-                        </>
-                      ) : hasVoted || isCompleted ? (
-                        <>
-                          <FiBarChart2 className='mr-1.5 h-3.5 w-3.5' />
-                          <span>View results</span>
-                        </>
-                      ) : isActive ? (
-                        <>
-                          <FiCheckCircle className='mr-1.5 h-3.5 w-3.5' />
-                          <span>Open ballot</span>
-                        </>
-                      ) : (
-                        <>
-                          <FiEye className='mr-1.5 h-3.5 w-3.5' />
-                          <span>View details</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };

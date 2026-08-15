@@ -2,23 +2,29 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Link,
   useNavigate,
   useLocation,
 } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import Home from './pages/Home.jsx';
 import Elections from './pages/Elections.jsx';
-import CreateElection from './pages/CreateElection.jsx';
 import Vote from './pages/Vote.jsx';
-import Results from './pages/Results.jsx';
 import HowItWorks from './pages/HowItWorks.jsx';
-import Admin from './pages/Admin.jsx';
-import ElectionDetails from './pages/ElectionDetails.jsx';
 import Profile from './pages/Profile.jsx';
+
+// The admin console and the results view pull in the heavy reporting
+// dependencies (jsPDF, html2canvas). Loading them on demand keeps those out of
+// the bundle a voter downloads just to cast a ballot.
+const Admin = lazy(() => import('./pages/Admin.jsx'));
+const CreateElection = lazy(() => import('./pages/CreateElection.jsx'));
+const ElectionDetails = lazy(() => import('./pages/ElectionDetails.jsx'));
+const Results = lazy(() => import('./pages/Results.jsx'));
+
 import { ElectionProvider } from './context/ElectionContext.jsx';
 import { VoterProvider } from './context/VoterContext.jsx';
 import { SettingsProvider, useSettings } from './context/SettingsContext.jsx';
@@ -43,10 +49,14 @@ const MaintenanceRedirect = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // If in maintenance mode and not on an allowed path, redirect to home
+    // If in maintenance mode and not on an allowed path, redirect to the
+    // maintenance notice. `/maintenance` itself has to be on the list, or the
+    // effect would fire again on arrival and redirect the page to itself.
+    const allowedPaths = ['/admin', '/maintenance'];
+
     if (
       maintenanceMode &&
-      !['/admin', '/login'].some((path) => location.pathname.startsWith(path))
+      !allowedPaths.some((path) => location.pathname.startsWith(path))
     ) {
       navigate('/maintenance');
     }
@@ -55,10 +65,36 @@ const MaintenanceRedirect = () => {
   return null;
 };
 
+// Shown while a lazily-loaded route is being fetched
+const RouteFallback = () => (
+  <div className='flex justify-center items-center py-24 text-gray-500'>
+    Loading…
+  </div>
+);
+
+// Catch-all for unknown URLs. Without it, React Router matches nothing and
+// renders a blank page.
+const NotFoundPage = () => (
+  <div className='py-20 text-center'>
+    <p className='text-sm font-semibold tracking-wider text-primary-600 uppercase'>
+      404
+    </p>
+    <h1 className='mt-2 text-3xl md:text-4xl font-bold text-gray-900'>
+      Page not found
+    </h1>
+    <p className='mt-3 max-w-md mx-auto text-gray-600'>
+      The page you are looking for doesn't exist or may have been moved.
+    </p>
+    <Link
+      to='/'
+      className='mt-8 inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary-600 text-white text-sm font-medium shadow-sm hover:bg-primary-700 transition-colors duration-200'>
+      Back to home
+    </Link>
+  </div>
+);
+
 // Maintenance page component
 const MaintenancePage = () => {
-  const navigate = useNavigate();
-
   return (
     <div className='min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8'>
       <div className='max-w-md w-full space-y-8 text-center'>
@@ -90,7 +126,7 @@ const MaintenancePage = () => {
           </div>
           <div className='mt-6'>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => window.location.reload()}
               className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'>
               Refresh Page
             </button>
@@ -140,44 +176,55 @@ function App() {
                 <Navbar />
                 <ScrollToTop />
                 <MaintenanceRedirect />
-                <main className='flex-1 pt-8 md:pt-12'>
+                {/* The navbar is fixed and about 88px tall, so the main region
+                    has to clear it. It previously offset only 32–48px, which
+                    slid the top of every page under the bar. */}
+                <main className='flex-1 pt-20 md:pt-24'>
                   <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full'>
-                    <Routes>
-                      <Route path='/' element={<Home />} />
-                      <Route path='/how-it-works' element={<HowItWorks />} />
-                      {/* Protected voter routes */}
-                      <Route element={<ProtectedRoute unauthRedirectTo='/' />}>
-                        <Route path='/elections' element={<Elections />} />
-                        <Route path='/profile' element={<Profile />} />
-                      </Route>
-                      {/* Public voting result routes (can remain accessible by link) */}
-                      <Route path='/vote/:electionId' element={<Vote />} />
-                      <Route
-                        path='/results/:electionId'
-                        element={<Results />}
-                      />
-                      <Route
-                        path='/maintenance'
-                        element={<MaintenancePage />}
-                      />
-
-                      {/* Protected admin routes */}
-                      <Route
-                        element={
-                          <ProtectedRoute
-                            allowedRoles={['admin', 'sysadmin']}
-                          />
-                        }>
-                        <Route path='/admin' element={<Admin />} />
-                        <Route path='/create' element={<CreateElection />} />
+                    <Suspense fallback={<RouteFallback />}>
+                      <Routes>
+                        <Route path='/' element={<Home />} />
+                        <Route path='/how-it-works' element={<HowItWorks />} />
+                        {/* Protected voter routes */}
                         <Route
-                          path='/admin/elections/:id'
-                          element={<ElectionDetails />}
+                          element={<ProtectedRoute unauthRedirectTo='/' />}>
+                          <Route path='/elections' element={<Elections />} />
+                          <Route path='/profile' element={<Profile />} />
+                        </Route>
+                        {/* Public voting result routes (can remain accessible by link) */}
+                        <Route path='/vote/:electionId' element={<Vote />} />
+                        <Route
+                          path='/results/:electionId'
+                          element={<Results />}
                         />
-                        <Route path='/admin/*' element={<Admin />} />
-                        {/* Add other admin-only routes here */}
-                      </Route>
-                    </Routes>
+                        <Route
+                          path='/maintenance'
+                          element={<MaintenancePage />}
+                        />
+
+                        {/* Protected admin routes. Sign-in happens in a modal
+                            rather than on a page, so an unauthenticated
+                            visitor is sent home to sign in there. */}
+                        <Route
+                          element={
+                            <ProtectedRoute
+                              allowedRoles={['admin', 'sysadmin']}
+                              unauthRedirectTo='/'
+                            />
+                          }>
+                          <Route path='/admin' element={<Admin />} />
+                          <Route path='/create' element={<CreateElection />} />
+                          <Route
+                            path='/admin/elections/:id'
+                            element={<ElectionDetails />}
+                          />
+                          <Route path='/admin/*' element={<Admin />} />
+                          {/* Add other admin-only routes here */}
+                        </Route>
+
+                        <Route path='*' element={<NotFoundPage />} />
+                      </Routes>
+                    </Suspense>
                   </div>
                 </main>
                 <Footer />
