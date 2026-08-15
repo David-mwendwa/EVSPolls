@@ -4,7 +4,7 @@ A secure and transparent electronic voting platform built with React, Node.js, a
 
 ## � Project Links
 
-- **GitHub Repository**: https://github.com/David-mwendwa/electronic-voting-system
+- **GitHub Repository**: https://github.com/David-mwendwa/EVSPolls
 - **Frontend (Netlify)**: https://evspolls.netlify.app
 - **Backend API (Render)**: https://electronic-voting-system-nxqt.onrender.com/api/v1
 
@@ -32,7 +32,7 @@ A secure and transparent electronic voting platform built with React, Node.js, a
 ## 📁 Project Structure
 
 ```
-electronic-voting-system/
+EVSPolls/
 ├── frontend/              # Frontend React application
 │   ├── public/            # Static files
 │   └── src/               # Source files
@@ -81,8 +81,8 @@ From the root directory, you can run:
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/David-mwendwa/electronic-voting-system.git
-   cd electronic-voting-system
+   git clone https://github.com/David-mwendwa/EVSPolls.git
+   cd EVSPolls
    ```
 
 2. **Install all dependencies**
@@ -320,4 +320,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 David Mwendwa - [@DavidMwens](https://x.com/davidmwens?s=21&t=0K4V3sUOE2yo73T-9eBFuQ) - davidmw022@gmail.com
 
-Project Link: [https://github.com/David-mwendwa/electronic-voting-system](https://github.com/David-mwendwa/electronic-voting-system)
+Project Link: [https://github.com/David-mwendwa/EVSPolls](https://github.com/David-mwendwa/EVSPolls)

@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiExternalLink } from 'react-icons/fi';
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -24,9 +25,10 @@ const Footer = () => {
             <a
               href='https://techdave.netlify.app/'
               target='_blank'
-              rel='noreferrer'
-              className='font-medium text-gray-600 hover:text-primary-600 transition-colors duration-150'>
+              rel='noopener noreferrer'
+              className='inline-flex items-center gap-1 font-semibold text-primary-600 hover:text-primary-500 transition-colors duration-150'>
               David
+              <FiExternalLink size={12} aria-hidden='true' />
             </a>
           </span>
           <a
@@ -44,7 +46,7 @@ const Footer = () => {
             API Status
           </a>
           <a
-            href='https://github.com/David-mwendwa/electronic-voting-system'
+            href='https://github.com/David-mwendwa/EVSPolls'
             target='_blank'
             rel='noreferrer'
             className='text-[11px] sm:text-xs md:text-sm text-gray-500 hover:text-primary-600 transition-colors duration-150'>

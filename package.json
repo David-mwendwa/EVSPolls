@@ -1,5 +1,5 @@
 {
-  "name": "electronic-voting-system",
+  "name": "evspolls",
   "version": "1.0.0",
   "private": true,
   "description": "A secure and transparent electronic voting platform with React frontend and Node.js/Express backend",
@@ -9,7 +9,7 @@
     "url": "https://github.com/David-mwendwa"
   },
   "license": "MIT",
-  "repository": "github:David-mwendwa/electronic-voting-system",
+  "repository": "github:David-mwendwa/EVSPolls",
   "scripts": {
     "dev": "npx concurrently --kill-others-on-fail --names \"FRONTEND,BACKEND\" \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
     "build": "npm run build --prefix frontend",
