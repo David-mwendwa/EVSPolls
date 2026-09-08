@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <!-- The card is a 1200x630 band inside a 1200x1200 square because qlmanage
+       rasterises to a square; sips crops the band back out. Edit the artwork
+       inside the translate(0,285) group and leave the frame alone.
+
+       Palette and mark are EVSPolls's own, read from tailwind.config.js and
+       public/logo.svg rather than invented: the sky primary ramp (#0EA5E9 ->
+       #0369A1) and the same ballot-slip-into-the-box glyph, where the check is
+       the vote and the slot is the box. -->
+  <style id="fonts" />
+  <rect width="1200" height="1200" fill="#0b1220" />
+  <g transform="translate(0,285)">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0c1b2e" />
+        <stop offset="0.55" stop-color="#0b1220" />
+        <stop offset="1" stop-color="#070d18" />
+      </linearGradient>
+      <radialGradient id="glow" cx="0.14" cy="0.1" r="0.9">
+        <stop offset="0" stop-color="#0EA5E9" stop-opacity="0.30" />
+        <stop offset="1" stop-color="#0EA5E9" stop-opacity="0" />
+      </radialGradient>
+      <linearGradient id="mark" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#0EA5E9" />
+        <stop offset="1" stop-color="#0369A1" />
+      </linearGradient>
+      <clipPath id="band"><rect width="1200" height="630" /></clipPath>
+    </defs>
+
+    <g clip-path="url(#band)">
+      <rect width="1200" height="630" fill="url(#bg)" />
+      <rect width="1200" height="630" fill="url(#glow)" />
+      <rect x="0" y="0" width="1200" height="5" fill="#0284c7" />
+
+      <!-- The logo mark at 1.05x, exactly the geometry in public/logo.svg. -->
+      <g transform="translate(84,74) scale(1.05)">
+        <rect width="64" height="64" rx="14" fill="url(#mark)"/>
+        <path d="M20 30V17a2 2 0 0 1 2-2h20a2 2 0 0 1 2 2v13" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M26.5 23.5l4 4 7.5-7.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M14 30h36v15a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V30z" fill="#FFFFFF" fill-opacity="0.22"/>
+        <path d="M14 30h36v15a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V30z" stroke="#FFFFFF" stroke-width="3.2" stroke-linejoin="round"/>
+      </g>
+      <text x="172" y="118" font-family="Raleway" font-size="38" font-weight="800" fill="#f1f5f9" letter-spacing="-0.8">EVSPolls</text>
+
+      <text x="84" y="255" font-family="Raleway" font-size="80" font-weight="800" fill="#f8fafc" letter-spacing="-2.4">Elections your voters</text>
+      <text x="84" y="345" font-family="Raleway" font-size="80" font-weight="800" fill="#38bdf8" letter-spacing="-2.4">can actually trust</text>
+
+      <text x="84" y="416" font-family="Montserrat" font-size="29" font-weight="400" fill="#94a3b8" letter-spacing="-0.2">Student councils, faculty senates and alumni boards —</text>
+      <text x="84" y="456" font-family="Montserrat" font-size="29" font-weight="400" fill="#94a3b8" letter-spacing="-0.2">verifiable ballots and results the moment polls close.</text>
+
+      <g transform="translate(84,510)">
+        <rect width="266" height="48" rx="24" fill="#0c2136" stroke="#1e3a52" />
+        <text x="24" y="31" font-family="Montserrat" font-size="20" font-weight="500" fill="#7dd3fc">One vote per voter</text>
+      </g>
+      <g transform="translate(370,510)">
+        <rect width="232" height="48" rx="24" fill="#0c2136" stroke="#1e3a52" />
+        <text x="24" y="31" font-family="Montserrat" font-size="20" font-weight="500" fill="#7dd3fc">Live results</text>
+      </g>
+      <g transform="translate(622,510)">
+        <rect width="258" height="48" rx="24" fill="#0c2136" stroke="#1e3a52" />
+        <text x="24" y="31" font-family="Montserrat" font-size="20" font-weight="500" fill="#7dd3fc">Auditable roll</text>
+      </g>
+    </g>
+  </g>
+</svg>

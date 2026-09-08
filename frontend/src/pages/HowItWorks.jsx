@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import usePageMeta from '../lib/pageMeta';
 
 const HowItWorks = () => {
+  usePageMeta('How it works', 'How an EVSPolls election runs end to end: voter roll, ballot, one vote per voter, and results published the moment polls close.');
   const { isAuthenticated } = useAuth();
   const steps = [
     {

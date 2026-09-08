@@ -27,8 +27,10 @@ import {
   FiMail,
   FiUser,
 } from 'react-icons/fi';
+import usePageMeta from '../lib/pageMeta';
 
 const ElectionDetails = () => {
+  usePageMeta('Election details', 'Manage a single election.', { noindex: true });
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();

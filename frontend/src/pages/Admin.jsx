@@ -51,8 +51,10 @@ import {
 import { TableSkeleton, Spinner } from '../components/ui/Loaders';
 import VoterModal from '../components/VoterModal';
 import CreateElection from './CreateElection';
+import usePageMeta from '../lib/pageMeta';
 
 const Admin = () => {
+  usePageMeta('Admin', 'Election administration console.', { noindex: true });
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     typeof window !== 'undefined' ? window.innerWidth >= 768 : true
   );

@@ -226,7 +226,24 @@ export const AuthProvider = ({ children }) => {
         rememberMe,
         setRememberMe,
       }}>
-      {!loading && children}
+      {/* Renders children immediately rather than `{!loading && children}`.
+          That gate blanked the entire application — navbar, footer, page and
+          all — until the session check finished, which is why the public
+          pages could not be prerendered at all: in Node the effect never
+          runs, so the whole tree rendered to zero bytes.
+
+          Nothing is lost by removing it. ProtectedRoute reads `loading`
+          itself and shows its own state while the check is in flight, so
+          guarded routes still wait; the difference is that the parts of the
+          app which never depended on a session stop waiting with them.
+
+          The session is deliberately still restored in an effect rather than
+          seeded synchronously from storage. Seeding would show a signed-in
+          navbar one render earlier, at the cost of making the first client
+          render disagree with the prerendered HTML — and React responds to a
+          hydration mismatch by discarding the whole document, which is a far
+          worse trade than one frame of signed-out header. */}
+      {children}
     </AuthContext.Provider>
   );
 };

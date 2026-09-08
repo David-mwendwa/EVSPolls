@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 
 // Security middleware
+import compression from 'compression';
 import helmet from 'helmet';
 import xss from 'xss-clean';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -76,6 +77,12 @@ app.use(
 );
 
 // Data sanitization against NoSQL injection
+// Ahead of everything that produces a body. `compression` has been a
+// dependency of this package for a long time without ever being wired up —
+// installed, listed, and doing nothing. The election and voter endpoints send
+// JSON that is mostly repeated keys, which is close to gzip's best case.
+app.use(compression());
+
 app.use(mongoSanitize());
 
 // Parse JSON and URL-encoded request bodies

@@ -18,8 +18,11 @@ import Button from '../components/ui/Button';
 import StatCard from '../components/ui/StatCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import { formatDate } from '../utils/election';
+import usePageMeta from '../lib/pageMeta';
 
 const Results = () => {
+  // Public by link, deliberately not public by search.
+  usePageMeta('Results', 'Published results for this election.', { noindex: true });
   const { electionId } = useParams();
   const navigate = useNavigate();
   const { getElectionById, loading: electionsLoading } = useElection();

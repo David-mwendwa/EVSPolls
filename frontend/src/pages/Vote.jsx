@@ -19,6 +19,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import StatusBadge from '../components/ui/StatusBadge';
 import { timingLabel } from '../utils/election';
+import usePageMeta from '../lib/pageMeta';
 
 /** Initials used for a candidate's avatar. */
 const initialsOf = (name = '') =>
@@ -95,6 +96,8 @@ const CandidateOption = ({ candidate, selected, disabled, onSelect }) => {
 };
 
 const Vote = () => {
+  // A ballot is never search-engine material.
+  usePageMeta('Cast your vote', 'Cast your ballot.', { noindex: true });
   const { electionId } = useParams();
   const { submitVote, loading: electionsLoading } = useElection();
   const navigate = useNavigate();

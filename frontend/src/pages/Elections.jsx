@@ -21,6 +21,7 @@ import {
   formatDate,
   turnoutOf,
 } from '../utils/election.js';
+import usePageMeta from '../lib/pageMeta';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -128,6 +129,8 @@ const ElectionCard = ({ election, hasVoted }) => {
 };
 
 const Elections = () => {
+  // Which elections an institution is running is that institution's business.
+  usePageMeta('Elections', 'Elections you are eligible to vote in.', { noindex: true });
   const { elections, loading, error } = useElection();
   const [filter, setFilter] = useState('all');
 

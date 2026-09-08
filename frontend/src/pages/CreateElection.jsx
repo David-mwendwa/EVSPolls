@@ -22,6 +22,7 @@ import {
   FiSave,
   FiChevronDown,
 } from 'react-icons/fi';
+import usePageMeta from '../lib/pageMeta';
 
 // List of general political parties and affiliations
 const POLITICAL_PARTIES = [
@@ -49,6 +50,7 @@ const POLITICAL_PARTIES = [
 ];
 
 const CreateElection = ({ onCancel }) => {
+  usePageMeta('Create an election', 'Set up a new election.', { noindex: true });
   const [formData, setFormData] = useState({
     title: '',
     description: '',

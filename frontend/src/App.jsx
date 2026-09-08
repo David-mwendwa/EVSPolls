@@ -1,29 +1,27 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Link,
-  useNavigate,
-  useLocation,
-} from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { lazy, Suspense, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
-import Home from './pages/Home.jsx';
-import Elections from './pages/Elections.jsx';
-import Vote from './pages/Vote.jsx';
-import HowItWorks from './pages/HowItWorks.jsx';
-import Profile from './pages/Profile.jsx';
+import WakingNotice from './components/WakingNotice.jsx';
+import usePageMeta from './lib/pageMeta';
 
-// The admin console and the results view pull in the heavy reporting
-// dependencies (jsPDF, html2canvas). Loading them on demand keeps those out of
-// the bundle a voter downloads just to cast a ballot.
-const Admin = lazy(() => import('./pages/Admin.jsx'));
-const CreateElection = lazy(() => import('./pages/CreateElection.jsx'));
-const ElectionDetails = lazy(() => import('./pages/ElectionDetails.jsx'));
-const Results = lazy(() => import('./pages/Results.jsx'));
+// Every page is loaded on demand — see routes.jsx. The admin console and the
+// results view were already lazy because they pull in the reporting
+// dependencies (jsPDF, html2canvas); the voter-facing pages are now too, so a
+// visitor reading the home page no longer downloads the ballot screen with it.
+import {
+  Home,
+  HowItWorks,
+  Elections,
+  Vote,
+  Profile,
+  Admin,
+  CreateElection,
+  ElectionDetails,
+  Results,
+} from './routes.jsx';
 
 import { ElectionProvider } from './context/ElectionContext.jsx';
 import { VoterProvider } from './context/VoterContext.jsx';
@@ -74,7 +72,10 @@ const RouteFallback = () => (
 
 // Catch-all for unknown URLs. Without it, React Router matches nothing and
 // renders a blank page.
-const NotFoundPage = () => (
+const NotFoundPage = () => {
+  usePageMeta('Page not found', 'That page does not exist on EVSPolls.', { noindex: true });
+
+  return (
   <div className='py-20 text-center'>
     <p className='text-sm font-semibold tracking-wider text-primary-600 uppercase'>
       404
@@ -91,10 +92,13 @@ const NotFoundPage = () => (
       Back to home
     </Link>
   </div>
-);
+  );
+};
 
 // Maintenance page component
 const MaintenancePage = () => {
+  usePageMeta('Under maintenance', 'EVSPolls is briefly offline for scheduled maintenance.', { noindex: true });
+
   return (
     <div className='min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8'>
       <div className='max-w-md w-full space-y-8 text-center'>
@@ -165,9 +169,16 @@ const MaintenancePage = () => {
   );
 };
 
-function App() {
+// The router is a parameter rather than a fixed <BrowserRouter> because this
+// same tree is rendered twice: by main.jsx in the browser, and by
+// scripts/prerender.mjs under a MemoryRouter at build time. Defining the
+// provider stack once is the point — a prerendered page assembled from a
+// second, hand-kept copy drifts from the real app the first time a provider is
+// added, and the failure surfaces as a hydration mismatch that blanks the page
+// rather than as anything obviously wrong here.
+function App({ router: Router, routerProps }) {
   return (
-    <Router>
+    <Router {...routerProps}>
       <SettingsProvider>
         <AuthProvider>
           <ElectionProvider>
@@ -175,6 +186,7 @@ function App() {
               <div className='min-h-screen bg-gray-50 flex flex-col'>
                 <Navbar />
                 <ScrollToTop />
+                <WakingNotice />
                 <MaintenanceRedirect />
                 {/* The navbar is fixed and about 88px tall, so the main region
                     has to clear it. It previously offset only 32–48px, which

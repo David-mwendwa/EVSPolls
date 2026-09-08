@@ -7,8 +7,10 @@ import {
   FiUserCheck,
   FiClock,
 } from 'react-icons/fi';
+import usePageMeta from '../lib/pageMeta';
 
 const Profile = () => {
+  usePageMeta('Your profile', 'Your voter profile and voting history.', { noindex: true });
   const { user } = useAuth();
 
   const displayName = user?.name || 'Your Account';

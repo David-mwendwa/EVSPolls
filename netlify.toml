@@ -1,9 +1,105 @@
+# Netlify deploys the frontend only; the Express API lives on Render (see
+# render.yaml). Set VITE_API_BASE_URL in the Netlify UI (Site configuration →
+# Environment variables) to the Render service URL plus /api/v1. Without it the
+# build falls back to the deployed default in src/api/apiClient.js, and
+# vite.config.js also reads it to emit the API preconnect hint.
+
 [build]
   base = ""
   command = "cd frontend && npm install && npm run build"
   publish = "frontend/dist"
 
+# Client-side routing: every unmatched path is served by the SPA shell. Must
+# stay last so real files (and /assets/*) win first.
+#
+# Deliberately not `force`d, which is what lets the prerendered pages work:
+# Netlify serves a real file in preference to an unforced redirect, so
+# /how-it-works is answered by frontend/dist/how-it-works/index.html — the copy
+# with its own title, description and rendered markup — while this rule stays
+# the fallback for everything the build did not write, which is most of the app.
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Everything that is an election rather than a description of the product is
+# asked not to be indexed, and these headers rather than meta tags are what do
+# it: the pages are client-rendered, so a crawler that does not execute
+# JavaScript would never see a <meta name="robots">, while a header arrives
+# with the response every time.
+#
+# /results/* matters most. Results are deliberately reachable by link so an
+# institution can circulate them, and "reachable by link" is exactly the shape
+# of URL that ends up in a search index unless something says otherwise. A
+# student council result is for that institution's members, not for everyone
+# who searches a candidate's name. `follow` is kept so the crawler still walks
+# the links out of these pages.
+[[headers]]
+  for = "/results/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/vote/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/elections"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/profile"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+# Vite fingerprints everything under /assets, so it can be cached forever.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The HTML is never cached: it names the fingerprinted asset files, so a stale
+# copy pins a visitor to a deploy that no longer exists. Every prerendered
+# route is its own index.html and needs the same treatment.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
+
+[[headers]]
+  for = "/*/index.html"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
+
+# Fonts are self-hosted (see frontend/public/fonts) and their contents never
+# change under a given filename — a new subset gets a new name. They are also
+# on the critical path for first paint, so they are the assets most worth
+# never fetching twice.
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Access-Control-Allow-Origin = "*"
+
+# The unfurl image, fetched by every service that renders a shared link. A day
+# rather than a year: it is not fingerprinted, and a redesigned card that stays
+# stale in Slack's cache for a year is worse than one extra request.
+[[headers]]
+  for = "/og.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

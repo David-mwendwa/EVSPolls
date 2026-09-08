@@ -6,18 +6,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite-node scripts/prerender.jsx && node scripts/verify-build.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:client": "vite build",
+    "prerender": "vite-node scripts/prerender.jsx",
+    "verify": "node scripts/verify-build.mjs",
+    "og": "node scripts/build-og.mjs",
+    "test:prerender": "node tests/prerender.test.mjs"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
-    "axios": "^1.13.2",
     "date-fns": "^4.1.0",
-    "file-saver": "^2.0.5",
-    "framer-motion": "^12.23.24",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "react": "^18.2.0",
@@ -25,7 +26,6 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^6.15.0",
     "react-toastify": "^10.0.4",
-    "uuid": "^9.0.0",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
@@ -37,10 +37,12 @@
     "@vitejs/plugin-react": "^4.0.4",
     "autoprefixer": "^10.4.22",
     "jsdom": "^29.1.1",
+    "playwright-core": "^1.63.0",
     "postcss": "^8.5.6",
     "prettier": "^3.0.2",
     "tailwindcss": "^3.4.18",
     "vite": "^4.4.5",
+    "vite-node": "^0.34.6",
     "vitest": "^0.34.1"
   },
   "browserslist": {

@@ -3,37 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>EVSPolls | Secure Online Elections</title>
     <meta
       name="description"
-      content="EVSPolls runs secure, transparent elections for student councils, faculty senates and alumni boards." />
-    <title>EVSPolls | Secure Online Elections</title>
+      content="EVSPolls runs secure, transparent elections for student councils, faculty senates and alumni boards — verifiable ballots, live results, and one vote per voter." />
+    <link rel="canonical" href="https://evspolls.netlify.app/" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
 
-    <!-- Preconnect to external domains -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <!-- Preload critical resources -->
-    <link
-      rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Raleway:wght@400;500;600;700;800&display=swap" />
-
     <!-- Theme color for mobile browsers: primary-600 from tailwind.config.js -->
     <meta name="theme-color" content="#0284c7" />
 
-    <!-- Open Graph / Social Media Meta Tags -->
+    <!-- Montserrat carries the body copy above the fold, so it is the face
+         worth blocking on; Raleway only sets headings and can arrive with the
+         rest of the page. Both are self-hosted — a Google Fonts stylesheet
+         costs two cross-origin round trips before a single glyph exists. -->
+    <link rel="preload" href="/fonts/Montserrat.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+
+    <!-- These are defaults. usePageMeta rewrites them per route, and the build
+         writes the correct values straight into each prerendered page, so a
+         crawler that never runs the JavaScript still gets the right ones. -->
     <meta property="og:site_name" content="EVSPolls" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://evspolls.netlify.app/" />
     <meta property="og:title" content="EVSPolls | Secure Online Elections" />
     <meta
       property="og:description"
-      content="EVSPolls runs secure, transparent elections for student councils, faculty senates and alumni boards." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://evspolls.netlify.app/" />
-    <meta property="og:image" content="/logo.svg" />
-    <meta name="twitter:card" content="summary" />
+      content="EVSPolls runs secure, transparent elections for student councils, faculty senates and alumni boards — verifiable ballots, live results, and one vote per voter." />
+    <!-- Absolute, and a raster. The previous value was "/logo.svg": relative,
+         which unfurlers cannot resolve, and SVG, which almost none of them
+         render. Link previews were blank everywhere. -->
+    <meta property="og:image" content="https://evspolls.netlify.app/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="EVSPolls — secure online elections for institutions" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="EVSPolls | Secure Online Elections" />
+    <meta
+      name="twitter:description"
+      content="EVSPolls runs secure, transparent elections for student councils, faculty senates and alumni boards — verifiable ballots, live results, and one vote per voter." />
+    <meta name="twitter:image" content="https://evspolls.netlify.app/og.jpg" />
+    <meta name="twitter:image:alt" content="EVSPolls — secure online elections for institutions" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "EVSPolls",
+        "url": "https://evspolls.netlify.app",
+        "applicationCategory": "BusinessApplication",
+        "description": "Secure, transparent online elections for student councils, faculty senates and alumni boards.",
+        "inLanguage": "en"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

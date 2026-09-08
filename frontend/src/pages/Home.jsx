@@ -7,8 +7,10 @@ import { Spinner } from '../components/ui/Loaders';
 import { FiX, FiCheckCircle, FiLogIn } from 'react-icons/fi';
 import Login from '../components/auth/Login';
 import Register from '../components/auth/Register';
+import usePageMeta from '../lib/pageMeta';
 
 const Home = () => {
+  usePageMeta();
   const [showElectionModal, setShowElectionModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);

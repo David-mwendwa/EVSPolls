@@ -48,6 +48,20 @@ const Register = ({ open, onClose, onSwitchToLogin }) => {
     }
   }, [open]);
 
+  // Loaded on the first keystroke in the password field, never with the page.
+  //
+  // It is a big module — 819 kB, 383 kB gzipped, almost all of it frequency
+  // lists, keyboard adjacency graphs and l33t tables. That is measured and
+  // deliberate. The obvious replacement, @zxcvbn-ts, is the same algorithm
+  // with the dictionaries split into separate packages, and it is *worse*
+  // here: core plus language-common plus language-en is 866 kB gzipped.
+  // Dropping language-en brings it to ~250 kB but throws away the 89k
+  // surnames, 56k English words and 30k Wikipedia terms, so a password like a
+  // common local first name plus a year would be scored as strong. A strength
+  // meter that lies is worth less than the bytes it saves.
+  //
+  // This never touches page load: nothing here is fetched until someone is
+  // typing into the password field of the registration form.
   useEffect(() => {
     if (!formData.password || scorePassword) return;
 
