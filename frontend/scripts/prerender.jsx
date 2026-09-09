@@ -15,7 +15,7 @@
  * entry for itself, so a .mjs version of this file fails on the first .jsx
  * import it reaches.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Writable } from 'node:stream';
@@ -35,7 +35,21 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, '../dist');
-const template = readFileSync(join(dist, 'index.html'), 'utf8');
+/*
+ * The shell, with its authored comments stripped.
+ *
+ * HTML comments are not minified away: Vite copies index.html to the browser
+ * verbatim, so view-source exposes every note about fonts, preconnects and
+ * managed meta tags. That reasoning belongs in the repo, not in the response.
+ *
+ * Only the template is stripped, never the rendered body: React writes its own
+ * `<!--$-->` and `<!--/$-->` Suspense markers into the HTML, and removing
+ * those breaks hydration. Conditional comments are spared for the same reason.
+ */
+const template = readFileSync(join(dist, 'index.html'), 'utf8').replace(
+  /\n?\s*<!--(?!\[if)[\s\S]*?-->/g,
+  '',
+);
 
 // renderToString does not wait for Suspense boundaries to settle — it emits
 // the fallback and moves on. onAllReady does wait, which is the whole point
@@ -148,6 +162,38 @@ const robots = () =>
     '',
   ].join('\n');
 
+
+/*
+ * public/ is copied into dist untouched, so the notes in fonts.css, robots.txt
+ * and the logo SVGs are served to anyone who opens them — a favicon is fetched
+ * by every browser tab — for the same reason the shell's are stripped. fonts.css
+ * is render-blocking as well, which puts those bytes on the critical path.
+ *
+ * dist/assets is skipped deliberately: Vite has already minified what it emits
+ * there, and a blanket strip would take the `/*!` licence headers with it.
+ */
+const stripAssetComments = (dir) => {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'assets') continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      stripAssetComments(full);
+      continue;
+    }
+    const comments = entry.name.endsWith('.svg')
+      ? /\n?\s*<!--[\s\S]*?-->/g
+      : entry.name.endsWith('.css')
+        ? /\n?\s*\/\*[\s\S]*?\*\//g
+        : entry.name.endsWith('.txt')
+          ? /^[ \t]*#.*$\n?/gm
+          : null;
+    if (!comments) continue;
+    const text = readFileSync(full, 'utf8');
+    const cleaned = text.replace(comments, '').replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n');
+    if (cleaned !== text) writeFileSync(full, cleaned);
+  }
+};
+
 const run = async () => {
   const results = [];
   for (const path of PRERENDER_PATHS) results.push(await buildPage(path));
@@ -155,6 +201,8 @@ const run = async () => {
   writeFileSync(join(dist, 'robots.txt'), robots());
   for (const r of results) console.log(`  prerendered ${r.path.padEnd(14)} ${r.bytes} chars`);
   console.log('  sitemap.xml + robots.txt written');
+
+  stripAssetComments(dist);
 };
 
 run().catch((err) => {
